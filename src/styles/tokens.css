@@ -1,0 +1,153 @@
+/* FileMind Centralized Design Tokens — Impeccable Operate Standard */
+
+:root,
+[data-theme="light"] {
+  /* Surface Layers (Warm Ivory & Neutral Paper) */
+  --bg-ground: #FBF9F5;
+  --bg-surface-0: #FFFFFF;
+  --bg-surface-1: #F5F2EC;
+  --bg-surface-2: #EBE6DE;
+  --bg-surface-hover: #E3DDD4;
+  --bg-surface-active: #D9D2C8;
+
+  /* Typography Colors */
+  --text-primary: #1F2022;
+  --text-secondary: #5A5C61;
+  --text-muted: #82858B;
+  --text-inverse: #FBF9F5;
+
+  /* Hairline Structural Borders */
+  --border-subtle: #E5DFD4;
+  --border-strong: #D1C9BC;
+  --border-focus: #4A6B5B;
+
+  /* Primary Accent: Muted Sage Green */
+  --accent-base: #4A6B5B;
+  --accent-hover: #3D584B;
+  --accent-active: #31463C;
+  --accent-subtle: #EBF0EC;
+  --accent-border: #9CB2A6;
+  --accent-contrast: #FFFFFF;
+
+  /* Secondary / Destructive Accent: Muted Terracotta */
+  --secondary-base: #B4533C;
+  --danger-base: #B4533C;
+  --danger-hover: #98432E;
+  --danger-active: #7E3523;
+  --danger-subtle: #F8EDE9;
+  --danger-border: #D8A598;
+  --danger-contrast: #FFFFFF;
+
+  /* Warnings: Restrained Amber */
+  --warning-base: #C08A3E;
+  --warning-hover: #A67530;
+  --warning-subtle: #FBF4E6;
+  --warning-border: #E0CFA6;
+  --warning-text: #6B4E1A;
+
+  /* Success & Safe Indicators */
+  --safe-base: #4A6B5B;
+  --safe-subtle: #EBF0EC;
+  --safe-border: #B2C7BC;
+  --safe-text: #2D4C3E;
+
+  /* The Parts You Did Not Draw */
+  --selection-bg: #DCE5E0;
+  --selection-text: #1F2022;
+  --scrollbar-thumb: #D5CEBF;
+  --scrollbar-thumb-hover: #BFB7A6;
+  --focus-ring: 0 0 0 2px #FBF9F5, 0 0 0 4px #4A6B5B;
+  --shadow-dropdown: 0 4px 16px rgba(31, 32, 34, 0.08);
+  --shadow-modal: 0 12px 32px rgba(31, 32, 34, 0.14);
+}
+
+[data-theme="dark"] {
+  /* Surface Layers (Warm Charcoal) */
+  --bg-ground: #18191A;
+  --bg-surface-0: #202123;
+  --bg-surface-1: #26282B;
+  --bg-surface-2: #2E3034;
+  --bg-surface-hover: #373A3E;
+  --bg-surface-active: #414449;
+
+  /* Typography Colors */
+  --text-primary: #EAE7E1;
+  --text-secondary: #B0AEA8;
+  --text-muted: #7E7C77;
+  --text-inverse: #18191A;
+
+  /* Hairline Structural Borders */
+  --border-subtle: #2E3034;
+  --border-strong: #42454B;
+  --border-focus: #628975;
+
+  /* Primary Accent: Soft Sage Green */
+  --accent-base: #628975;
+  --accent-hover: #759F8A;
+  --accent-active: #88B49F;
+  --accent-subtle: #242E28;
+  --accent-border: #4A6355;
+  --accent-contrast: #18191A;
+
+  /* Secondary / Destructive Accent: Muted Copper / Terracotta */
+  --secondary-base: #C86953;
+  --danger-base: #C86953;
+  --danger-hover: #D77A64;
+  --danger-active: #E48D78;
+  --danger-subtle: #332320;
+  --danger-border: #6B3C32;
+  --danger-contrast: #18191A;
+
+  /* Warnings: Accessible Ochre Amber */
+  --warning-base: #D4A359;
+  --warning-hover: #E0B46E;
+  --warning-subtle: #302A1F;
+  --warning-border: #615235;
+  --warning-text: #E5C384;
+
+  /* Success & Safe Indicators */
+  --safe-base: #628975;
+  --safe-subtle: #202D26;
+  --safe-border: #3D5A4B;
+  --safe-text: #9CCEB6;
+
+  /* The Parts You Did Not Draw */
+  --selection-bg: #2C3E34;
+  --selection-text: #EAE7E1;
+  --scrollbar-thumb: #3E4145;
+  --scrollbar-thumb-hover: #50545A;
+  --focus-ring: 0 0 0 2px #18191A, 0 0 0 4px #628975;
+  --shadow-dropdown: 0 4px 16px rgba(0, 0, 0, 0.45);
+  --shadow-modal: 0 12px 32px rgba(0, 0, 0, 0.65);
+}
+
+/* Typography Tokens */
+:root {
+  --font-sans: "Segoe UI Variable Text", "Segoe UI", -apple-system, BlinkMacSystemFont, "Inter", system-ui, sans-serif;
+  --font-display: "Segoe UI Variable Display", "Segoe UI", -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono: "Cascadia Code", "Consolas", "Courier New", monospace;
+
+  /* Discrete Typography Steps (Operate Scale: Ratio 1.125-1.2) */
+  --text-micro: 11px;
+  --text-caption: 12px;
+  --text-body: 13px;
+  --text-ui: 13.5px;
+  --text-subhead: 15px;
+  --text-headline: 18px;
+  --text-title: 22px;
+
+  /* Radii Tokens */
+  --radius-xs: 2px;
+  --radius-sm: 3px;
+  --radius-md: 4px;
+  --radius-lg: 6px;
+
+  /* Layout Spacing */
+  --space-2xs: 2px;
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 12px;
+  --space-lg: 16px;
+  --space-xl: 24px;
+  --space-2xl: 32px;
+}

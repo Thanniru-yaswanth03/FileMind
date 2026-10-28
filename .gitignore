@@ -1,0 +1,53 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Rust build artifacts
+target/
+**/*.rs.bk
+Cargo.lock
+
+# Tauri build artifacts
+src-tauri/target/
+
+# Production build outputs
+dist/
+build/
+
+# SQLite databases & Local runtime data
+*.db
+*.db-wal
+*.db-shm
+*.db.bak*
+.filemind_quarantine/
+logs/
+data/
+
+# Environment & local credentials
+.env
+.env.*
+!.env.example
+
+# IDE & Editor
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+
+# Operating System Files
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+.DS_Store
+
+# Impeccable temporary mocks & cache
+.impeccable/mocks/decision/
+.impeccable/build/
+.impeccable/review/
+
