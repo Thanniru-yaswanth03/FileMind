@@ -4,6 +4,7 @@ import type { NavScreen } from '@/types';
 import {
   LayoutDashboard,
   FolderTree,
+  Search,
   FileSpreadsheet,
   Copy,
   ListChecks,
@@ -32,7 +33,7 @@ interface NavGroup {
 }
 
 export const Sidebar: React.FC = () => {
-  const { activeScreen, setActiveScreen, isSidebarCollapsed, toggleSidebar, cleanupPlan, duplicateGroups } = useApp();
+  const { activeScreen, setActiveScreen, isSidebarCollapsed, toggleSidebar, cleanupPlan, realDuplicateGroups } = useApp();
 
   const navGroups: NavGroup[] = [
     {
@@ -40,12 +41,13 @@ export const Sidebar: React.FC = () => {
       items: [
         { id: 'overview', label: 'Overview', icon: <LayoutDashboard size={15} /> },
         { id: 'storage-explorer', label: 'Storage Explorer', icon: <FolderTree size={15} /> },
+        { id: 'search', label: 'File Search', icon: <Search size={15} /> },
         { id: 'large-files', label: 'Large Files', icon: <FileSpreadsheet size={15} /> },
         {
           id: 'duplicates',
           label: 'Duplicate Finder',
           icon: <Copy size={15} />,
-          badge: duplicateGroups.length,
+          badge: realDuplicateGroups.length,
           badgeVariant: 'warning',
         },
       ],
@@ -148,6 +150,7 @@ export const Sidebar: React.FC = () => {
           type="button"
           onClick={toggleSidebar}
           title={isSidebarCollapsed ? 'Expand Sidebar (Ctrl+B)' : 'Collapse Sidebar (Ctrl+B)'}
+          aria-label={isSidebarCollapsed ? 'Expand Sidebar' : 'Collapse Sidebar'}
           style={{
             padding: '4px',
             color: 'var(--text-secondary)',
@@ -211,6 +214,8 @@ export const Sidebar: React.FC = () => {
                   type="button"
                   onClick={() => setActiveScreen(item.id)}
                   title={isSidebarCollapsed ? item.label : undefined}
+                  aria-label={item.label}
+                  aria-current={isActive ? 'page' : undefined}
                   style={{
                     display: 'flex',
                     alignItems: 'center',

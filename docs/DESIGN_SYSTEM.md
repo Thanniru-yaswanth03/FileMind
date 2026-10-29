@@ -18,7 +18,7 @@ Instead, FileMind draws inspiration from high-craft physical instruments, techni
 - **Desktop Density:** Compact tables, purposeful whitespace, visible borders, and immediate discoverability of information over decorative padding.
 
 ### Impeccable Skill Activation & Quality Floor
-The design system was verified against the **Impeccable** engine located at `C:\Users\batma\.gemini\config\skills\impeccable\`. Operating in **Operate Mode** (governing software where users are inside a focused task), the interface adheres to the following strict quality invariants:
+The design system was verified against the **Impeccable** design engine. Operating in **Operate Mode** (governing software where users are inside a focused task), the interface adheres to the following strict quality invariants:
 - **No Kickers or Eyebrows:** Headers stand on their own without diminutive labels above them.
 - **No Nested Cards:** Information grouping relies on subtle hairline dividers, borders, and spatial rhythm rather than multiple stacked card containers.
 - **No Gradient Text or Fake Neobrutalism:** Emphasis is achieved through weight and scale, not multi-color text gradients or heavy 4px block shadows.

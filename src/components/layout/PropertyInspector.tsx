@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useApp } from '@/context/AppContext';
 import { formatBytes, copyToClipboard } from '@/utils/format';
 import { Badge } from '../common/Badge';
@@ -13,13 +13,42 @@ import {
   Hash,
   HardDrive,
   FolderOpen,
+  CheckCircle2,
+  XCircle,
 } from 'lucide-react';
+import { evaluateSafety } from '@/services/api';
+import { SafetyAssessment } from '@/types';
 
 export const PropertyInspector: React.FC = () => {
-  const { selectedFile, isInspectorOpen, setIsInspectorOpen, inspectorWidth, setInspectorWidth, showToast, setActiveScreen } = useApp();
+  const {
+    selectedFile,
+    isInspectorOpen,
+    setIsInspectorOpen,
+    inspectorWidth,
+    setInspectorWidth,
+    showToast,
+    setActiveScreen,
+    openFileFolder,
+    copyFilePath,
+  } = useApp();
   const [isResizing, setIsResizing] = useState(false);
+  const [liveAssessment, setLiveAssessment] = useState<SafetyAssessment | null>(null);
   const startXRef = useRef(0);
   const startWidthRef = useRef(inspectorWidth);
+
+  useEffect(() => {
+    if (selectedFile?.path) {
+      evaluateSafety([selectedFile.path], 'evaluate')
+        .then((resp) => {
+          if (resp.assessments.length > 0) {
+            setLiveAssessment(resp.assessments[0]);
+          }
+        })
+        .catch(() => setLiveAssessment(null));
+    } else {
+      setLiveAssessment(null);
+    }
+  }, [selectedFile?.path]);
 
   if (!isInspectorOpen) return null;
 
@@ -179,9 +208,24 @@ export const PropertyInspector: React.FC = () => {
 
           {/* Safety & Evidence Analysis */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-            <span style={{ fontSize: 'var(--text-micro)', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase' }}>
-              Safety & Dependency Evidence
-            </span>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <span style={{ fontSize: 'var(--text-micro)', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase' }}>
+                Safety & Dependency Evidence
+              </span>
+              {liveAssessment && (
+                <span style={{ fontSize: 'var(--text-micro)', fontWeight: 600 }}>
+                  {liveAssessment.isPermitted ? (
+                    <span style={{ color: 'var(--safe-base)', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+                      <CheckCircle2 size={11} /> Permitted
+                    </span>
+                  ) : (
+                    <span style={{ color: 'var(--danger-base)', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+                      <XCircle size={11} /> Blocked
+                    </span>
+                  )}
+                </span>
+              )}
+            </div>
             <div
               style={{
                 padding: '10px',
@@ -194,8 +238,19 @@ export const PropertyInspector: React.FC = () => {
               }}
             >
               <div style={{ fontSize: 'var(--text-caption)', color: 'var(--text-secondary)', lineHeight: 1.4 }}>
-                {selectedFile.safetyRationale}
+                {liveAssessment?.blockReason || selectedFile.safetyRationale}
               </div>
+
+              {liveAssessment && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '2px', flexWrap: 'wrap' }}>
+                  <Badge variant="neutral">
+                    {liveAssessment.classification.replace(/([A-Z])/g, ' $1').trim()}
+                  </Badge>
+                  <span style={{ fontSize: 'var(--text-micro)', color: 'var(--text-muted)' }}>
+                    Recovery: {liveAssessment.recoveryPossibility}
+                  </span>
+                </div>
+              )}
 
               {selectedFile.isLocked && (
                 <div
@@ -306,9 +361,16 @@ export const PropertyInspector: React.FC = () => {
             <Button
               variant="secondary"
               icon={<FolderOpen size={13} />}
-              unavailableReason="Requires native Tauri Win32 integration (Phase 4)"
+              onClick={() => openFileFolder(selectedFile.path)}
             >
-              Reveal in Explorer (Phase 4)
+              Reveal in File Explorer
+            </Button>
+            <Button
+              variant="secondary"
+              icon={<Copy size={13} />}
+              onClick={() => copyFilePath(selectedFile.path)}
+            >
+              Copy Full Path
             </Button>
           </div>
         </div>

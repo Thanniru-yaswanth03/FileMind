@@ -1,95 +1,233 @@
 # FileMind
 
-> **Local-First Windows Desktop Storage Intelligence, Safety Analysis, and Clean Planning**
+<div align="center">
 
-FileMind is a local-first, privacy-respecting Windows desktop utility built with **Tauri 2**, **Rust**, **React 19**, and **SQLite**. It brings together high-performance storage visualization, metadata indexing, duplicate detection, dependency-aware safety scoring, intelligent cleanup planning, and recoverable quarantine operations.
+**Local-First Windows Desktop Storage Intelligence, Safety Guardian, and Clean Planning**
 
-FileMind runs completely offline with **zero mandatory cloud services, zero paid APIs, and zero telemetry**. It operates with complete utility even if its optional local AI copilot is entirely disabled.
+[![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
+[![Platform](https://img.shields.io/badge/platform-Windows%2010%20%7C%2011%20(x64)-0078D6.svg)](docs/DISTRIBUTION_GUIDE.md)
+[![Rust](https://img.shields.io/badge/rust-1.80%2B-orange.svg)](https://www.rust-lang.org/)
+[![React](https://img.shields.io/badge/react-19-61DAFB.svg)](https://react.dev/)
+[![SQLite](https://img.shields.io/badge/sqlite-WAL%20Mode-003B57.svg)](https://www.sqlite.org/)
+[![Telemetry](https://img.shields.io/badge/telemetry-0%25%20Offline-green.svg)](docs/PRIVACY_AND_DATA.md)
 
----
-
-## 1. Product Vision & Core Capabilities
-
-FileMind unifies 10 core desktop storage capabilities into a cohesive, evidence-based application:
-
-1. **Storage Analysis & Visualization:** Interactive treemaps, sunburst visualizations, and compact breakdown tables analyzing disk allocation down to individual clusters.
-2. **File Indexing & Search:** High-speed SQLite-backed indexing with FTS5 full-text search across filenames, metadata, and extracted document text.
-3. **Multi-Stage Duplicate Detection:** Deterministic duplicate identification pipeline using file size matching, 4KB sparse block hashing, full BLAKE3 cryptographic verification, and hardlink detection.
-4. **Evidence-Based File Safety Engine:** Deterministic rule engine evaluating system directories, running processes, open file locks, package manifests, and repository dirty states. **Unknown safety is never treated as safe.**
-5. **Intelligent Cleanup Planning:** Impact-assessed cleanup plans with projected space reclamation, grouped by risk tier (Safe, Caution, High Risk, Danger), requiring explicit user review.
-6. **Quarantine & Recoverable Operations:** Two-stage quarantine vaulting system with atomic file staging, metadata preservation, and complete zero-loss rollback manifests before any permanent purge.
-7. **Developer Workspace & Cache Analysis:** Deep inspection of developer bloat (`node_modules`, Python virtualenvs, Rust `target/`, Gradle/Maven caches, Docker layers, IDE indexes).
-8. **Configurable File Automation:** User-defined background rules (e.g., auto-archiving temporary downloads, clearing stale build caches beyond age thresholds) running via a native scheduler.
-9. **Optional Local Copilot:** An isolated, advisory JARVIS-style assistant connecting to a local Ollama instance. The model has **zero direct filesystem access** and communicates strictly via read-only inspection tools.
-10. **Local Diagnostics & Release Management:** Append-only local audit logs, crash diagnostics, database health checks, and secure Ed25519-signed update validation.
+</div>
 
 ---
 
-## 2. Environment Status & Prerequisites
+## 1. Overview
 
-During **Phase 0 Engineering Discovery**, the host Windows environment was inspected:
+**FileMind** is a high-performance, local-first Windows desktop storage manager and file safety guardian. It gives users complete visibility into disk allocation, locates exact duplicate files through cryptographic verification, identifies developer cache bloat, and executes safe, recoverable cleanups backed by a two-stage quarantine vault.
 
-| Component | Status | Details |
-| :--- | :--- | :--- |
-| **Operating System** | Supported | Windows 11 / Windows 10 (x64) |
-| **Node.js** | Available | `v22.19.0` |
-| **Package Manager** | Available | `npm 11.2.0`, `pnpm 10.13.1` (pnpm is the preferred package manager) |
-| **WebView2 Runtime** | Available | Microsoft Edge WebView2 installed in Program Files |
-| **Impeccable Design Engine** | Available | Installed globally at `C:\Users\batma\.gemini\config\skills\impeccable\` |
-| **Rust Toolchain** | **MISSING** | `rustc` and `cargo` not detected in PATH or user profile |
-| **C++ Build Tools** | **MISSING** | MSVC v143 toolchain & Windows SDK not detected by `vswhere` |
+FileMind is designed from first principles with **zero mandatory cloud services, zero analytics telemetry, and zero remote dependencies**. Everything runs entirely on your local machine.
 
-### Required Setup Instructions for Native Build
-
-Before compiling the native Tauri/Rust desktop binary, execute the following setup commands in an elevated PowerShell session:
-
-```powershell
-# 1. Install Microsoft Visual Studio 2022 C++ Build Tools & Windows 11 SDK
-winget install --id Microsoft.VisualStudio.2022.BuildTools --override "--passive --config C:\Users\batma\.gemini\antigravity\brain\vs_config.json --add Microsoft.VisualStudio.Workload.VCTools --includeRecommended"
-
-# 2. Install the Rust Toolchain via rustup
-winget install --id Rustlang.Rustup
-
-# 3. Configure default MSVC host target and restart terminal
-rustup default stable-x86_64-pc-windows-msvc
+```
+┌────────────────────────────────────────────────────────────────────────┐
+│                        FILEMIND ARCHITECTURE                           │
+├────────────────────────────────┬───────────────────────────────────────┤
+│        FRONTEND LAYER          │            BACKEND RUNTIME            │
+│  React 19 + TypeScript + Vite  │    Rust (Native x86_64 Executable)    │
+│   Impeccable Design Standard   │        Tauri 2 / Embedded HTTP        │
+├────────────────────────────────┴───────────────────────────────────────┤
+│                          CORE SUBSYSTEMS                               │
+│  ┌───────────────────────────┐         ┌────────────────────────────┐  │
+│  │   Multi-Threaded Scanner  │ ──────> │  SQLite WAL Storage Index  │  │
+│  └───────────────────────────┘         └────────────────────────────┘  │
+│                │                                     │                 │
+│                ▼                                     ▼                 │
+│  ┌───────────────────────────┐         ┌────────────────────────────┐  │
+│  │    Duplicate Detection    │         │     FTS5 Search Engine     │  │
+│  │  (Size + 4KB + BLAKE3)    │         │   (Filenames & Documents)  │  │
+│  └───────────────────────────┘         └────────────────────────────┘  │
+│                │                                     │                 │
+│                ▼                                     ▼                 │
+│  ┌───────────────────────────┐         ┌────────────────────────────┐  │
+│  │  Deterministic Guardian   │ ──────> │  Goal-Based Cleanup Plan   │  │
+│  │  (Evidence-Based Safety)  │         │  (Impact & Risk Grouping)  │  │
+│  └───────────────────────────┘         └────────────────────────────┘  │
+│                │                                     │                 │
+│                ▼                                     ▼                 │
+│  ┌───────────────────────────┐         ┌────────────────────────────┐  │
+│  │ Recoverable Quarantine    │         │ Local Automation Engine    │  │
+│  │ (Rollback Manifest Vault) │         │ (Rules & Audit Ledger)     │  │
+│  └───────────────────────────┘         └────────────────────────────┘  │
+│                │                                     │                 │
+│                ▼                                     ▼                 │
+│  ┌───────────────────────────┐         ┌────────────────────────────┐  │
+│  │  Advisory Local Copilot   │         │ Developer Workspace Bloat  │  │
+│  │  (Read-Only Ollama LLM)   │         │ (node_modules, target, venv)│  │
+│  └───────────────────────────┘         └────────────────────────────┘  │
+└────────────────────────────────────────────────────────────────────────┘
 ```
 
-> **Read-Only Gate:** Native destructive filesystem actions remain strictly blocked until the complete safety and quarantine architecture is implemented and verified through automated sandbox tests.
+---
+
+## 2. Key Features
+
+- **Blazing Fast Read-Only Scanner:** Multi-threaded filesystem enumeration using Rayon work-stealing and crossbeam channels. Resilient against inaccessible NTFS directories, junctions, and reparse points without hanging.
+- **SQLite Storage Index (WAL Mode):** High-throughput persistent index supporting sub-millisecond metadata lookups, extension categorization, directory aggregation, and historical scan tracking.
+- **Multi-Stage Duplicate Pipeline:** 
+  1. *Candidate Grouping:* Groups files by exact byte size.
+  2. *Sparse Block Hashing:* Reads 4KB header/footer blocks to prune non-duplicates.
+  3. *Cryptographic Verification:* Memory-bounded streaming [BLAKE3](https://github.com/BLAKE3-team/BLAKE3) hashes with hardlink deduplication.
+- **FTS5 Document & Metadata Search:** Real-time search across millions of indexed records, including extracted text from PDFs, plain text, and source code.
+- **Deterministic Safety Guardian:** Conservative risk engine evaluating target paths against 5 security classifications. **Unknown files are never assumed safe.** Detects Windows system paths, active process locks, and uncommitted Git changes.
+- **Recoverable Two-Stage Quarantine:** Deleted files are staged into an isolated vault with SHA-256 manifests, original timestamps, and permissions preserved for one-click rollback before any permanent purge.
+- **Developer Workspace Intelligence:** Identifies orphaned build directories (`node_modules`, Rust `target/`, Python `.venv`, Docker layers, Gradle/Maven caches).
+- **Local Automation Engine:** Typed background rules with disk thresholds, schedule triggers, and an append-only audit ledger.
+- **Advisory Local Copilot (Offline AI):** Optional integration with local [Ollama](https://ollama.com/) models (`qwen2.5-coder`, `llama3.2`). Grounded exclusively in your SQLite index with **zero write permissions**.
+- **Impeccable Design Standard:** Professional, distraction-free desktop aesthetic using warm paper-neutral palettes, high-contrast typography, and strict tabular numerals.
 
 ---
 
-## 3. Impeccable Design Integration
+## 3. Installation & Distribution
 
-FileMind rejects generic AI dashboard tropes—there are no neon glows, purple gradients, glassmorphism, floating AI orbs, or fake terminal windows. 
+FileMind is distributed in two formats:
 
-Instead, the UI follows the **Impeccable** design standard in **Operate Mode**:
-- **Surfaces:** Warm ivory (`#FBF9F5`) and paper-like neutral layers (`#F3EFEA`, `#E8E2D9`).
-- **Typography:** High-contrast graphite (`#1F2022`) and warm charcoal (`#2C2D30`) with strict tabular numerals (`font-variant-numeric: tabular-nums`) for data tables and measurements.
-- **Accents:** Restrained muted sage green (`#4A6B5B`) for primary actions and subtle indicators; muted terracotta (`#B4533C`) for warnings and destructive prompts.
-- **Dark Mode:** Complementary warm-charcoal (`#18191A`, `#222325`) palette preserving identical semantic contrast ratios.
+### Option A: Zero-Install Portable Edition (Recommended)
+
+Ideal for running from any folder, external SSD, or USB drive without administrative privileges:
+
+1. Download `FileMind-v0.2.0-windows-x64-portable.zip` from [GitHub Releases](https://github.com/vibe-filemind/filemind/releases).
+2. Extract the archive into any folder of your choice.
+3. Double-click `FileMind.exe`.
+4. FileMind launches and automatically opens its interface in your default browser at `http://localhost:41732`.
+
+> **Zero Registry Pollution:** The presence of `portable.flag` configures FileMind to store all SQLite databases, logs, and quarantine vaults in `./data/`. No files are written to `%LOCALAPPDATA%` or the Windows Registry. To uninstall, simply delete the extracted folder.
+
+### Option B: Native Windows Installer (Planned GA Release)
+
+*(Staged for future release pending brand icon finalization; v0.2.0 Beta is distributed primarily via the Zero-Install Portable Edition).*
+
+- **NSIS Installer (`.exe`):** Guided installation wizard with Desktop and Start Menu shortcuts, per-user or machine-wide installation, and an uninstaller in Windows *Settings > Installed apps*.
+- **WiX MSI Package (`.msi`):** Enterprise-ready installer supporting silent administrative deployments via:
+  ```powershell
+  msiexec /i FileMind.msi /qn /norestart
+  ```
 
 ---
 
-## 4. Documentation Index
+## 4. Cryptographic Verification & SmartScreen
 
-The complete architectural specification is maintained under the [`docs/`](file:///c:/Users/batma/Desktop/VibeCode/FileMind/docs) directory:
+### Verifying Release Checksums
 
-- [**PRODUCT_REQUIREMENTS.md**](file:///c:/Users/batma/Desktop/VibeCode/FileMind/docs/PRODUCT_REQUIREMENTS.md) — Comprehensive product vision, personas, user journeys, functional and non-functional specifications.
-- [**ARCHITECTURE.md**](file:///c:/Users/batma/Desktop/VibeCode/FileMind/docs/ARCHITECTURE.md) — Multi-process Tauri 2 architecture, 18 native module designs, data flows, and IPC contracts.
-- [**DESIGN_SYSTEM.md**](file:///c:/Users/batma/Desktop/VibeCode/FileMind/docs/DESIGN_SYSTEM.md) — Impeccable design system tokens, layout grids, components, dark mode, and accessibility benchmarks.
-- [**THREAT_MODEL.md**](file:///c:/Users/batma/Desktop/VibeCode/FileMind/docs/THREAT_MODEL.md) — STRIDE security evaluation, TOCTOU race mitigation, NTFS junction handling, and AI prompt isolation.
-- [**DATABASE_SCHEMA.md**](file:///c:/Users/batma/Desktop/VibeCode/FileMind/docs/DATABASE_SCHEMA.md) — SQLite schema, WAL configuration, FTS5 virtual tables, indexes, and migration strategy.
-- [**TEST_STRATEGY.md**](file:///c:/Users/batma/Desktop/VibeCode/FileMind/docs/TEST_STRATEGY.md) — Unit, integration, and E2E testing strategy, including destructive test sandboxes and benchmarks.
-- [**RELEASE_PLAN.md**](file:///c:/Users/batma/Desktop/VibeCode/FileMind/docs/RELEASE_PLAN.md) — CI/CD matrix, Ed25519 code signing, MSI/NSIS bundling, and update verification.
-- [**IMPLEMENTATION_ROADMAP.md**](file:///c:/Users/batma/Desktop/VibeCode/FileMind/docs/IMPLEMENTATION_ROADMAP.md) — Phased rollout plan, definition of done, and implementation gates.
-- [**DECISIONS.md**](file:///c:/Users/batma/Desktop/VibeCode/FileMind/docs/DECISIONS.md) — Architecture Decision Records (ADRs) explaining core design trade-offs.
+To verify the integrity of your download, open PowerShell in your download folder:
+
+```powershell
+# Automated verification via included script:
+.\Verify-Checksums.ps1
+
+# Or manual verification:
+(Get-FileHash .\FileMind-v0.2.0-windows-x64-portable.zip -Algorithm SHA256).Hash
+```
+
+Compare the output hash with the published hash in [GitHub Releases](https://github.com/vibe-filemind/filemind/releases) or `SHA256SUMS.txt`.
+
+### Windows Defender SmartScreen Notice
+
+> [!NOTE]
+> FileMind is open-source software built locally and published on GitHub without commercial Extended Validation (EV) code signing certificates (which cost several hundred dollars annually).
+> 
+> When running FileMind for the first time, Windows Defender SmartScreen may display an *"Unknown Publisher"* warning:
+> 1. Verify the cryptographic SHA-256 hash using the command above.
+> 2. Click **More info**.
+> 3. Click **Run anyway**.
+>
+> If you prefer not to bypass SmartScreen, you can inspect the source code and compile the binary locally using the build instructions below.
 
 ---
 
-## 5. Security & Safety Guarantee
+## 5. System Requirements
 
-The safety of user files is an absolute invariant:
-- **No Direct AI Filesystem Control:** The optional LLM acts purely as an advisory reader. Every operation must translate into a typed proposal evaluated by the Rust safety engine.
-- **Two-Stage Quarantine Vault:** Files scheduled for deletion are moved into an isolated staging vault with an index manifest before any purge can occur.
-- **Audit Ledger:** Every quarantine, restore, and purge action is immutably logged into a local SQLite ledger.
+| Specification | Requirement |
+| :--- | :--- |
+| **Operating System** | Windows 10 (version 1809+) or Windows 11 (x64) |
+| **Processor** | 64-bit Intel / AMD x86_64 processor (2+ cores recommended) |
+| **RAM** | 512 MB minimum (1 GB recommended for large scans >1M files) |
+| **Storage** | 35 MB disk space for executable; variable space for index database |
+| **Browser Runtime** | Microsoft Edge WebView2 (pre-installed on Windows 10/11) or modern browser |
+| **Network** | **None.** Operates 100% offline |
 
+---
+
+## 6. Building from Source
+
+### Prerequisites
+
+Ensure you have the following installed on your Windows development environment:
+- **Git:** For version control.
+- **Node.js 20+ & pnpm:** `npm install -g pnpm`
+- **Rust Toolchain:** `rustup default stable-x86_64-pc-windows-gnu` or `stable-x86_64-pc-windows-msvc`.
+- **C/C++ Compiler:** MinGW-w64 GCC or Visual Studio C++ Build Tools.
+
+### Build Steps
+
+1. **Clone the repository:**
+   ```powershell
+   git clone https://github.com/vibe-filemind/filemind.git
+   cd FileMind
+   ```
+
+2. **Install frontend dependencies & build static assets:**
+   ```powershell
+   pnpm install
+   pnpm run build
+   ```
+
+3. **Run the full test suite (85 tests across 19 suites):**
+   ```powershell
+   cargo test --all
+   ```
+
+4. **Compile the optimized release binary:**
+   ```powershell
+   cargo build --release --bin filemind-core
+   ```
+
+5. **Package the distribution bundle:**
+   ```powershell
+   powershell -ExecutionPolicy Bypass -File scripts/package-release.ps1 -Version "0.2.0"
+   ```
+
+---
+
+## 7. Privacy & Data Handling
+
+FileMind's core engineering principles guarantee user privacy:
+
+- **Zero Remote Telemetry:** No tracking, pingbacks, analytics, or error crash reporting sent across the network.
+- **Local Storage Index:** Metadata indexes and scan histories are stored in a standard local SQLite database (`filemind.db`).
+- **Protected Paths & Folders:** Sensitive user paths can be explicitly excluded from scans and search indexing.
+- **Offline AI Isolation:** If Ollama local copilot is enabled, prompts are routed exclusively to `http://localhost:11434`. No data ever leaves your computer.
+
+For complete privacy specifications, read [`docs/PRIVACY_AND_DATA.md`](docs/PRIVACY_AND_DATA.md).
+
+---
+
+## 8. Documentation Index
+
+Detailed architectural specifications and engineering guides:
+
+- [**Distribution & Packaging Guide**](docs/DISTRIBUTION_GUIDE.md) — Artifact formats, silent installations, and disaster recovery.
+- [**Privacy & Data Policy**](docs/PRIVACY_AND_DATA.md) — Local-first privacy guarantees and diagnostic scrubbing.
+- [**Product Requirements**](docs/PRODUCT_REQUIREMENTS.md) — User personas, functional requirements, and core constraints.
+- [**Architecture & Contracts**](docs/ARCHITECTURE.md) — Multi-process model, native IPC contracts, and module boundaries.
+- [**Impeccable Design Standard**](docs/DESIGN_SYSTEM.md) — Visual tokens, tabular typography, and accessible color palettes.
+- [**Threat Model & Mitigations**](docs/THREAT_MODEL.md) — STRIDE security analysis, TOCTOU race mitigation, and reparse security.
+- [**Database Schema Specification**](docs/DATABASE_SCHEMA.md) — SQLite schema, WAL configuration, and FTS5 search tables.
+- [**Security & QA Audit**](docs/TEST_STRATEGY.md) — Test strategy, sandboxed execution tests, and benchmark performance.
+- [**Changelog**](CHANGELOG.md) — Chronological history of all releases and improvements.
+- [**Engineering Operating Instructions**](docs/OPERATING_INSTRUCTIONS.md) — Implementation, design, security, and verification disciplines.
+- [**Contributing Guidelines**](CONTRIBUTING.md) — Development workflow, code style, and safety contribution invariants.
+
+---
+
+## 9. Contributing
+
+We welcome community contributions that uphold FileMind's safety and privacy principles. Before submitting a pull request, please review [CONTRIBUTING.md](CONTRIBUTING.md).
+
+---
+
+## 10. License
+
+FileMind is licensed under the **Apache License, Version 2.0**. See [LICENSE](LICENSE) for details.

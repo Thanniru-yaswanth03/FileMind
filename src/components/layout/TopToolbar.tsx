@@ -32,6 +32,7 @@ export const TopToolbar: React.FC = () => {
     setSearchQuery,
     isInspectorOpen,
     toggleInspector,
+    setActiveScreen,
   } = useApp();
 
   const unreadNotifs = notifications.filter((n) => !n.read).length;
@@ -129,7 +130,12 @@ export const TopToolbar: React.FC = () => {
           type="text"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          placeholder="Filter files, caches, or extensions... (Ctrl+F)"
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              setActiveScreen('search');
+            }
+          }}
+          placeholder="Filter files, caches, or extensions... (Enter for Search)"
           style={{
             width: '100%',
             padding: '4px 8px 4px 26px',
@@ -169,6 +175,7 @@ export const TopToolbar: React.FC = () => {
           type="button"
           onClick={() => setIsNotificationOpen(!isNotificationOpen)}
           title="Notifications"
+          aria-label={unreadNotifs > 0 ? `${unreadNotifs} unread notifications` : 'Notifications'}
           style={{
             padding: '4px 6px',
             color: unreadNotifs > 0 ? 'var(--warning-base)' : 'var(--text-secondary)',
@@ -196,6 +203,7 @@ export const TopToolbar: React.FC = () => {
           type="button"
           onClick={toggleTheme}
           title={theme === 'light' ? 'Switch to Warm Charcoal Dark Theme' : 'Switch to Warm Ivory Light Theme'}
+          aria-label={theme === 'light' ? 'Switch to Warm Charcoal Dark Theme' : 'Switch to Warm Ivory Light Theme'}
           style={{ padding: '4px 6px', color: 'var(--text-secondary)' }}
         >
           {theme === 'light' ? <Moon size={15} /> : <Sun size={15} />}
@@ -206,6 +214,7 @@ export const TopToolbar: React.FC = () => {
           type="button"
           onClick={toggleInspector}
           title={isInspectorOpen ? 'Collapse Details Inspector' : 'Expand Details Inspector'}
+          aria-label={isInspectorOpen ? 'Collapse Details Inspector' : 'Expand Details Inspector'}
           style={{
             padding: '4px 6px',
             color: isInspectorOpen ? 'var(--accent-base)' : 'var(--text-secondary)',

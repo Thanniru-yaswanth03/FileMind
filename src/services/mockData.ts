@@ -503,6 +503,10 @@ export const defaultSettings: AppSettings = {
   ollamaEndpoint: 'http://127.0.0.1:11434',
   ollamaModel: 'llama3:latest',
   enableCopilot: true,
+  enableVoiceInput: true,
+  enableVoiceOutput: false,
+  voiceRate: 1.0,
+  voicePitch: 1.0,
   excludedPaths: [
     'C:\\Windows',
     'C:\\Program Files\\WindowsApps',

@@ -7,9 +7,10 @@ interface BadgeProps {
   tier?: RiskTier;
   children?: React.ReactNode;
   className?: string;
+  title?: string;
 }
 
-export const Badge: React.FC<BadgeProps> = ({ variant, tier, children, className = '' }) => {
+export const Badge: React.FC<BadgeProps> = ({ variant, tier, children, className = '', title }) => {
   let bg = 'var(--bg-surface-2)';
   let text = 'var(--text-secondary)';
   let border = 'var(--border-subtle)';
@@ -51,6 +52,7 @@ export const Badge: React.FC<BadgeProps> = ({ variant, tier, children, className
   return (
     <span
       className={className}
+      title={title}
       style={{
         display: 'inline-flex',
         alignItems: 'center',

@@ -77,6 +77,7 @@ export const DataTable: React.FC<DataTableProps> = ({
     >
       {/* Table Header */}
       <div
+        role="row"
         style={{
           display: 'grid',
           gridTemplateColumns: showCheckbox
@@ -94,9 +95,11 @@ export const DataTable: React.FC<DataTableProps> = ({
           letterSpacing: '0.04em',
         }}
       >
-        {showCheckbox && <div />}
+        {showCheckbox && <div role="columnheader" />}
         <button
           type="button"
+          role="columnheader"
+          aria-sort={sortField === 'name' ? (sortAsc ? 'ascending' : 'descending') : 'none'}
           onClick={() => handleSort('name')}
           style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer', justifySelf: 'start' }}
         >
@@ -105,6 +108,8 @@ export const DataTable: React.FC<DataTableProps> = ({
         </button>
         <button
           type="button"
+          role="columnheader"
+          aria-sort={sortField === 'category' ? (sortAsc ? 'ascending' : 'descending') : 'none'}
           onClick={() => handleSort('category')}
           style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer', justifySelf: 'start' }}
         >
@@ -113,6 +118,8 @@ export const DataTable: React.FC<DataTableProps> = ({
         </button>
         <button
           type="button"
+          role="columnheader"
+          aria-sort={sortField === 'size' ? (sortAsc ? 'ascending' : 'descending') : 'none'}
           onClick={() => handleSort('size')}
           style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer', justifySelf: 'end' }}
         >
@@ -121,6 +128,8 @@ export const DataTable: React.FC<DataTableProps> = ({
         </button>
         <button
           type="button"
+          role="columnheader"
+          aria-sort={sortField === 'mtime' ? (sortAsc ? 'ascending' : 'descending') : 'none'}
           onClick={() => handleSort('mtime')}
           style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer', justifySelf: 'end' }}
         >
@@ -129,6 +138,8 @@ export const DataTable: React.FC<DataTableProps> = ({
         </button>
         <button
           type="button"
+          role="columnheader"
+          aria-sort={sortField === 'risk' ? (sortAsc ? 'ascending' : 'descending') : 'none'}
           onClick={() => handleSort('risk')}
           style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer', justifySelf: 'end' }}
         >
@@ -137,9 +148,32 @@ export const DataTable: React.FC<DataTableProps> = ({
         </button>
       </div>
 
-      {/* Table Body (Virtualized Scroll Area) */}
+      {/* Table Body (Virtualized Scroll Area with Keyboard Navigation) */}
       <div
         tabIndex={0}
+        role="rowgroup"
+        aria-label="Files table"
+        onKeyDown={(e) => {
+          if (sortedFiles.length === 0) return;
+          if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            const currentIndex = sortedFiles.findIndex((f) => f.id === selectedFileId);
+            if (currentIndex < sortedFiles.length - 1) {
+              onSelectFile && onSelectFile(sortedFiles[currentIndex + 1]);
+            } else if (currentIndex === -1) {
+              onSelectFile && onSelectFile(sortedFiles[0]);
+            }
+          } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            const currentIndex = sortedFiles.findIndex((f) => f.id === selectedFileId);
+            if (currentIndex > 0) {
+              onSelectFile && onSelectFile(sortedFiles[currentIndex - 1]);
+            }
+          } else if (e.key === ' ' && selectedFileId) {
+            e.preventDefault();
+            onToggleSelectId && onToggleSelectId(selectedFileId);
+          }
+        }}
         style={{
           flex: 1,
           overflowY: 'auto',
@@ -153,6 +187,8 @@ export const DataTable: React.FC<DataTableProps> = ({
           return (
             <div
               key={file.id}
+              role="row"
+              aria-selected={isSelected}
               onClick={() => onSelectFile && onSelectFile(file)}
               onContextMenu={(e) => {
                 e.preventDefault();

@@ -17,12 +17,14 @@ import {
   Sun,
   Play,
   PanelRight,
+  Sparkles,
+  ArrowRight,
 } from 'lucide-react';
 
 interface CommandItem {
   id: string;
   title: string;
-  category: 'Navigation' | 'Actions' | 'Preferences';
+  category: 'Assistant' | 'Search' | 'Actions' | 'Navigation' | 'Preferences';
   icon: React.ReactNode;
   shortcut?: string;
   run: () => void;
@@ -37,6 +39,8 @@ export const CommandPalette: React.FC = () => {
     startScan,
     toggleInspector,
     showToast,
+    setSearchQuery,
+    sendCopilotMessage,
   } = useApp();
 
   const [query, setQuery] = useState('');
@@ -49,26 +53,102 @@ export const CommandPalette: React.FC = () => {
     showToast(`Navigated to ${label}`);
   };
 
-  const commands: CommandItem[] = [
+  const baseCommands: CommandItem[] = [
+    // Primary Actions
+    {
+      id: 'act-scan',
+      title: 'Trigger Volume Scan',
+      category: 'Actions',
+      icon: <Play size={14} style={{ color: 'var(--accent-base)' }} />,
+      run: () => {
+        startScan();
+        setIsCommandPaletteOpen(false);
+      },
+    },
+    {
+      id: 'act-planner',
+      title: 'Prepare Cleanup Plan',
+      category: 'Actions',
+      icon: <ListChecks size={14} style={{ color: 'var(--accent-base)' }} />,
+      run: () => navigateTo('cleanup-planner', 'Cleanup Planner'),
+    },
+    {
+      id: 'act-duplicates',
+      title: 'Inspect & Review Duplicates',
+      category: 'Actions',
+      icon: <Copy size={14} style={{ color: 'var(--warning-base)' }} />,
+      run: () => navigateTo('duplicates', 'Duplicate Finder'),
+    },
+    {
+      id: 'act-activity',
+      title: 'Review Recent Operations & Quarantine Vault',
+      category: 'Actions',
+      icon: <RotateCcw size={14} />,
+      run: () => navigateTo('activity-recovery', 'Activity & Recovery'),
+    },
+    {
+      id: 'act-inspector',
+      title: 'Toggle Property Inspector',
+      category: 'Actions',
+      icon: <PanelRight size={14} />,
+      run: () => {
+        toggleInspector();
+        setIsCommandPaletteOpen(false);
+      },
+    },
+
+    // Navigation
     { id: 'nav-overview', title: 'Go to Overview', category: 'Navigation', icon: <LayoutDashboard size={14} />, run: () => navigateTo('overview', 'Overview') },
     { id: 'nav-storage', title: 'Go to Storage Explorer', category: 'Navigation', icon: <FolderTree size={14} />, run: () => navigateTo('storage-explorer', 'Storage Explorer') },
+    { id: 'nav-search', title: 'Go to File Search', category: 'Navigation', icon: <Search size={14} />, run: () => navigateTo('search', 'File Search') },
     { id: 'nav-large', title: 'Go to Large Files', category: 'Navigation', icon: <FileSpreadsheet size={14} />, run: () => navigateTo('large-files', 'Large Files') },
-    { id: 'nav-duplicates', title: 'Go to Duplicate Finder', category: 'Navigation', icon: <Copy size={14} />, run: () => navigateTo('duplicates', 'Duplicate Finder') },
-    { id: 'nav-planner', title: 'Go to Cleanup Planner', category: 'Navigation', icon: <ListChecks size={14} />, run: () => navigateTo('cleanup-planner', 'Cleanup Planner') },
     { id: 'nav-safety', title: 'Go to Safety Center', category: 'Navigation', icon: <ShieldCheck size={14} />, run: () => navigateTo('safety-center', 'Safety Center') },
     { id: 'nav-dev', title: 'Go to Developer Cleanup', category: 'Navigation', icon: <Code2 size={14} />, run: () => navigateTo('developer-cleanup', 'Developer Cleanup') },
     { id: 'nav-auto', title: 'Go to Automations', category: 'Navigation', icon: <Clock size={14} />, run: () => navigateTo('automations', 'Automations') },
     { id: 'nav-jarvis', title: 'Go to JARVIS Copilot', category: 'Navigation', icon: <Bot size={14} />, run: () => navigateTo('jarvis', 'JARVIS Copilot') },
-    { id: 'nav-activity', title: 'Go to Activity & Recovery', category: 'Navigation', icon: <RotateCcw size={14} />, run: () => navigateTo('activity-recovery', 'Activity & Recovery') },
     { id: 'nav-settings', title: 'Go to Settings', category: 'Navigation', icon: <Settings size={14} />, run: () => navigateTo('settings', 'Settings') },
 
-    { id: 'act-scan', title: 'Trigger Volume Scan', category: 'Actions', icon: <Play size={14} />, run: () => { startScan(); setIsCommandPaletteOpen(false); } },
-    { id: 'act-inspector', title: 'Toggle Property Inspector', category: 'Actions', icon: <PanelRight size={14} />, run: () => { toggleInspector(); setIsCommandPaletteOpen(false); } },
+    // Preferences
     { id: 'act-theme', title: 'Toggle Light / Dark Mode', category: 'Preferences', icon: <Sun size={14} />, run: () => { toggleTheme(); setIsCommandPaletteOpen(false); } },
   ];
 
-  const filtered = commands.filter((c) =>
-    c.title.toLowerCase().includes(query.toLowerCase()) || c.category.toLowerCase().includes(query.toLowerCase())
+  // Dynamic context commands based on query input
+  const dynamicCommands: CommandItem[] = [];
+  const cleanQ = query.trim();
+
+  if (cleanQ.length > 0) {
+    const promptText = cleanQ.startsWith('?') || cleanQ.startsWith('>') ? cleanQ.slice(1).trim() : cleanQ;
+
+    // 1. Ask Copilot action
+    dynamicCommands.push({
+      id: 'copilot-ask',
+      title: `Ask JARVIS: "${promptText}"`,
+      category: 'Assistant',
+      icon: <Sparkles size={14} style={{ color: 'var(--accent-base)' }} />,
+      run: () => {
+        sendCopilotMessage(promptText);
+        navigateTo('jarvis', 'JARVIS Copilot');
+      },
+    });
+
+    // 2. Search files action
+    dynamicCommands.push({
+      id: 'search-query',
+      title: `Search local index for: "${promptText}"`,
+      category: 'Search',
+      icon: <Search size={14} style={{ color: 'var(--text-secondary)' }} />,
+      run: () => {
+        setSearchQuery(promptText);
+        navigateTo('search', 'File Search');
+      },
+    });
+  }
+
+  const allCommands = [...dynamicCommands, ...baseCommands];
+
+  const filtered = allCommands.filter((c) =>
+    c.title.toLowerCase().includes(query.toLowerCase()) ||
+    c.category.toLowerCase().includes(query.toLowerCase())
   );
 
   useEffect(() => {
@@ -130,7 +210,7 @@ export const CommandPalette: React.FC = () => {
         aria-label="Command Palette"
         style={{
           width: '100%',
-          maxWidth: '520px',
+          maxWidth: '540px',
           backgroundColor: 'var(--bg-surface-0)',
           border: '1px solid var(--border-strong)',
           borderRadius: 'var(--radius-lg)',
@@ -147,11 +227,11 @@ export const CommandPalette: React.FC = () => {
             display: 'flex',
             alignItems: 'center',
             gap: '8px',
-            padding: '10px 14px',
+            padding: '12px 14px',
             borderBottom: '1px solid var(--border-subtle)',
           }}
         >
-          <Search size={15} style={{ color: 'var(--text-muted)' }} />
+          <Search size={15} style={{ color: 'var(--accent-base)' }} />
           <input
             ref={inputRef}
             type="text"
@@ -160,7 +240,7 @@ export const CommandPalette: React.FC = () => {
               setQuery(e.target.value);
               setSelectedIndex(0);
             }}
-            placeholder="Type a screen name or action... (Arrows to navigate, Enter to run)"
+            placeholder="Type a command, file name, or ask JARVIS a storage question... (Arrows to navigate, Enter to run)"
             style={{
               flex: 1,
               border: 'none',
@@ -169,12 +249,18 @@ export const CommandPalette: React.FC = () => {
               color: 'var(--text-primary)',
               padding: 0,
               boxShadow: 'none',
+              outline: 'none',
             }}
           />
+          {query.trim() && (
+            <span style={{ fontSize: 'var(--text-micro)', color: 'var(--text-muted)' }}>
+              Enter ↵
+            </span>
+          )}
         </div>
 
         {/* Command Items List */}
-        <div style={{ maxHeight: '340px', overflowY: 'auto', padding: '6px' }}>
+        <div style={{ maxHeight: '360px', overflowY: 'auto', padding: '6px' }}>
           {filtered.length > 0 ? (
             filtered.map((cmd, idx) => {
               const isSelected = idx === selectedIndex;
@@ -186,30 +272,37 @@ export const CommandPalette: React.FC = () => {
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'space-between',
-                    padding: '7px 10px',
+                    padding: '8px 10px',
                     borderRadius: 'var(--radius-sm)',
                     backgroundColor: isSelected ? 'var(--accent-subtle)' : 'transparent',
                     color: isSelected ? 'var(--accent-base)' : 'var(--text-primary)',
                     cursor: 'pointer',
                     fontSize: 'var(--text-caption)',
+                    gap: '10px',
                   }}
                   onMouseEnter={() => setSelectedIndex(idx)}
                 >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <span style={{ color: isSelected ? 'var(--accent-base)' : 'var(--text-secondary)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0, flex: 1 }}>
+                    <span style={{ color: isSelected ? 'var(--accent-base)' : 'var(--text-secondary)', flexShrink: 0 }}>
                       {cmd.icon}
                     </span>
-                    <span style={{ fontWeight: isSelected ? 600 : 400 }}>{cmd.title}</span>
+                    <span className="truncate" style={{ fontWeight: isSelected ? 600 : 400 }}>
+                      {cmd.title}
+                    </span>
                   </div>
-                  <span style={{ fontSize: 'var(--text-micro)', color: 'var(--text-muted)' }}>
-                    {cmd.category}
-                  </span>
+
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
+                    <span style={{ fontSize: 'var(--text-micro)', color: 'var(--text-muted)' }}>
+                      {cmd.category}
+                    </span>
+                    {isSelected && <ArrowRight size={11} style={{ color: 'var(--accent-base)' }} />}
+                  </div>
                 </div>
               );
             })
           ) : (
-            <div style={{ padding: '16px', textAlign: 'center', color: 'var(--text-muted)', fontSize: 'var(--text-caption)' }}>
-              No matching commands found.
+            <div style={{ padding: '20px', textAlign: 'center', color: 'var(--text-muted)', fontSize: 'var(--text-caption)' }}>
+              No matching commands found. Type a question to ask JARVIS directly.
             </div>
           )}
         </div>

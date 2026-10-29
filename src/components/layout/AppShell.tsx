@@ -12,6 +12,7 @@ import { Toast } from '../common/Toast';
 // Screens
 import { OverviewScreen } from '@/screens/OverviewScreen';
 import { StorageExplorerScreen } from '@/screens/StorageExplorerScreen';
+import { FileSearchScreen } from '@/screens/FileSearchScreen';
 import { LargeFilesScreen } from '@/screens/LargeFilesScreen';
 import { DuplicateFinderScreen } from '@/screens/DuplicateFinderScreen';
 import { CleanupPlannerScreen } from '@/screens/CleanupPlannerScreen';
@@ -52,6 +53,8 @@ export const AppShell: React.FC = () => {
         return <OverviewScreen />;
       case 'storage-explorer':
         return <StorageExplorerScreen />;
+      case 'search':
+        return <FileSearchScreen />;
       case 'large-files':
         return <LargeFilesScreen />;
       case 'duplicates':

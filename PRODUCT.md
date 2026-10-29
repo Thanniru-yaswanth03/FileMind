@@ -48,7 +48,7 @@ Unlike conventional disk cleaners that use opaque heuristics or blanket deletion
 ## Evidence on Hand
 
 - Windows 11 host environment with Node.js 22.19.0, npm 11.2.0, pnpm 10.13.1, and WebView2 Runtime installed.
-- Impeccable design system engine available globally at `C:\Users\batma\.gemini\config\skills\impeccable\`.
+- Impeccable design system engine available in the local configuration.
 - Missing prerequisites documented: Rust toolchain (`rustup`/`cargo`) and Visual Studio C++ Build Tools (MSVC v143 + Windows 11 SDK).
 
 ## Product Principles

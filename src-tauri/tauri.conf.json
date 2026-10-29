@@ -1,0 +1,60 @@
+{
+  "$schema": "https://raw.githubusercontent.com/tauri-apps/tauri/refs/heads/v2/crates/tauri-cli/schema.json",
+  "productName": "FileMind",
+  "version": "0.2.0",
+  "identifier": "com.filemind.desktop",
+  "build": {
+    "beforeDevCommand": "pnpm dev",
+    "beforeBuildCommand": "pnpm build",
+    "devUrl": "http://localhost:3000",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "FileMind — Storage Intelligence",
+        "width": 1240,
+        "height": 820,
+        "minWidth": 980,
+        "minHeight": 640,
+        "resizable": true,
+        "fullscreen": false,
+        "decorations": true,
+        "transparent": false
+      }
+    ],
+    "security": {
+      "csp": "default-src 'self' 'unsafe-inline' http://127.0.0.1:41732 http://localhost:41732; connect-src 'self' http://127.0.0.1:41732 http://localhost:41732 http://127.0.0.1:11434 http://localhost:11434; img-src 'self' data:; style-src 'self' 'unsafe-inline'; font-src 'self' data:"
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": ["nsis", "msi"],
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/icon.ico"
+    ],
+    "copyright": "Copyright © 2026 FileMind Contributors",
+    "shortDescription": "Native Storage Intelligence & Deterministic Safety Engine for Windows",
+    "longDescription": "FileMind is a professional local-first Windows storage management utility featuring deep directory aggregation, cryptographic duplicate detection, deterministic safety verification, and developer workspace intelligence.",
+    "windows": {
+      "nsis": {
+        "languages": ["en-US"],
+        "displayLanguageSelector": false
+      },
+      "wix": {
+        "language": "en-US"
+      }
+    }
+  },
+  "plugins": {
+    "updater": {
+      "endpoints": [
+        "https://github.com/vibe-filemind/filemind/releases/latest/download/latest.json"
+      ],
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDM4MjgxMjA0NTVEMjI2RDIKUldUM1V1YUVaMGg0M01Odm1OZnRLZ0Z5VlpnSVhCSzZ5U1Q3SEFhdk93bmlBSEg0OG9tQU5CckEK"
+    }
+  }
+}
+

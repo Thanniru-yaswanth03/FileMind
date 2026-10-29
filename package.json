@@ -1,13 +1,18 @@
 {
   "name": "filemind",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.2.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "core:build": "cargo build --manifest-path crates/filemind-core/Cargo.toml",
+    "core:test": "cargo test --manifest-path crates/filemind-core/Cargo.toml",
+    "core:run": "cargo run --manifest-path crates/filemind-core/Cargo.toml",
+    "package:portable": "powershell -ExecutionPolicy Bypass -File scripts/package-release.ps1 -PortableOnly",
+    "package:all": "powershell -ExecutionPolicy Bypass -File scripts/package-release.ps1"
   },
   "dependencies": {
     "@tanstack/react-virtual": "^3.13.2",
@@ -16,6 +21,7 @@
     "react-dom": "^19.0.0"
   },
   "devDependencies": {
+    "@tauri-apps/cli": "^2.2.0",
     "@types/node": "^22.13.4",
     "@types/react": "^19.0.10",
     "@types/react-dom": "^19.0.4",

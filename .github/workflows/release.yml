@@ -1,0 +1,140 @@
+name: FileMind Release Packaging & Distribution
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+permissions:
+  contents: write
+
+jobs:
+  release-windows:
+    name: Build & Package Windows Distribution Artifacts
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Extract Release Tag Version
+        id: vars
+        shell: pwsh
+        run: |
+          $tag = "${{ github.ref_name }}".TrimStart("v")
+          echo "VERSION=$tag" >> $env:GITHUB_OUTPUT
+          Write-Host "Releasing version: $tag"
+
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Setup pnpm Package Manager
+        uses: pnpm/action-setup@v3
+        with:
+          version: 10
+
+      - name: Setup Rust Stable Toolchain (MSVC)
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-pc-windows-msvc
+
+      - name: Cache Cargo Dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-release-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-release-
+
+      - name: Install Frontend Dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run Full Test Suite Pre-Flight Gate
+        run: |
+          pnpm run typecheck
+          cargo test --manifest-path crates/filemind-core/Cargo.toml --all
+
+      - name: Build Portable Windows Distribution
+        shell: pwsh
+        run: |
+          powershell -ExecutionPolicy Bypass -File scripts/package-release.ps1 -Version "${{ steps.vars.outputs.VERSION }}"
+
+      - name: Package Tauri Desktop Installers (NSIS & MSI)
+        if: hashFiles('src-tauri/icons/*') != ''
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_KEY_PWD }}
+        with:
+          projectPath: "./src-tauri"
+          tagName: ${{ github.ref_name }}
+          releaseName: 'FileMind v${{ steps.vars.outputs.VERSION }}'
+          releaseDraft: true
+          prerelease: false
+
+      - name: Consolidate Release Artifacts & Generate Checksums
+        shell: pwsh
+        run: |
+          $relDir = "releases\v${{ steps.vars.outputs.VERSION }}"
+          
+          # Copy any generated MSI / NSIS installers from target/release/bundle
+          if (Test-Path "src-tauri\target\release\bundle\nsis") {
+              Get-ChildItem "src-tauri\target\release\bundle\nsis\*.exe" | Copy-Item -Destination $relDir -Force
+          }
+          if (Test-Path "src-tauri\target\release\bundle\msi") {
+              Get-ChildItem "src-tauri\target\release\bundle\msi\*.msi" | Copy-Item -Destination $relDir -Force
+          }
+
+          # Regenerate master SHA256SUMS.txt
+          $hashList = @()
+          Get-ChildItem $relDir -File | Where-Object { $_.Name -notlike "SHA256SUMS.txt" -and $_.Name -notlike "*.ps1" } | ForEach-Object {
+              $hash = (Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLower()
+              $hashList += "$hash  $($_.Name)"
+              Write-Host "$($_.Name): $hash"
+          }
+          $hashList | Set-Content (Join-Path $relDir "SHA256SUMS.txt") -Encoding UTF8
+
+      - name: Upload Release Artifacts to GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: 'FileMind v${{ steps.vars.outputs.VERSION }}'
+          draft: true
+          prerelease: false
+          files: |
+            releases/v${{ steps.vars.outputs.VERSION }}/*
+          body: |
+            ## FileMind v${{ steps.vars.outputs.VERSION }} — Official Windows Release
+
+            FileMind is a local-first Windows storage intelligence utility and deterministic file safety engine.
+
+            ### Distribution Packages
+            - **Standard NSIS Installer (`FileMind_${{ steps.vars.outputs.VERSION }}_x64-setup.exe`):** Recommended for desktop users. Installs to `%LOCALAPPDATA%\Programs\FileMind` with Start Menu shortcut.
+            - **Enterprise MSI Installer (`FileMind_${{ steps.vars.outputs.VERSION }}_x64_en-US.msi`):** Recommended for sysadmins and Group Policy / silent deployment (`/quiet /qn`).
+            - **Zero-Install Portable Archive (`FileMind-v${{ steps.vars.outputs.VERSION }}-windows-x64-portable.zip`):** Standalone archive with zero registry or `%LOCALAPPDATA%` footprint. Stores all state in `./data/`.
+
+            ### System Requirements
+            - **Operating System:** Windows 10 (Build 1809+ / 64-bit) or Windows 11 (64-bit).
+            - **Runtime:** Microsoft Edge WebView2 Evergreen Runtime (pre-installed on Windows 11 and modern Windows 10).
+            - **Memory:** 4 GB RAM recommended.
+            - **Disk Space:** ~120 MB free space.
+
+            ### Integrity & Verification
+            Every artifact's cryptographic SHA-256 checksum is listed in `SHA256SUMS.txt`. You can verify any downloaded file in PowerShell:
+            ```powershell
+            Get-FileHash .\FileMind-v${{ steps.vars.outputs.VERSION }}-windows-x64-portable.zip -Algorithm SHA256
+            ```
+
+            > [!IMPORTANT]
+            > **Code Signing & Windows SmartScreen Notice:**
+            > Community releases built from GitHub Actions are unsigned or signed with open-source workflow tokens. Windows Defender SmartScreen may display an *"Unknown Publisher"* prompt on first launch. This is expected for new open-source binaries. Verify the SHA-256 checksum matches the table above, click **"More info"**, and select **"Run anyway"**.
+

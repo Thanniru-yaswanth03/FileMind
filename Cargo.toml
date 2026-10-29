@@ -1,0 +1,6 @@
+[workspace]
+members = [
+    "crates/filemind-core"
+]
+resolver = "2"
+

@@ -4,7 +4,15 @@ import { copyToClipboard } from '../../utils/format';
 import { Info, Copy, PlusCircle, ShieldAlert, FolderOpen, Trash2 } from 'lucide-react';
 
 export const ContextMenu: React.FC = () => {
-  const { contextMenu, closeContextMenu, setSelectedFile, setIsInspectorOpen, showToast, setActiveScreen } = useApp();
+  const {
+    contextMenu,
+    closeContextMenu,
+    setSelectedFile,
+    setIsInspectorOpen,
+    showToast,
+    setActiveScreen,
+    openFileFolder,
+  } = useApp();
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -173,23 +181,26 @@ export const ContextMenu: React.FC = () => {
 
       <button
         type="button"
-        disabled
-        title="Requires native Tauri Win32 integration (Phase 4)"
+        onClick={async () => {
+          await openFileFolder(file.path);
+          closeContextMenu();
+        }}
         style={{
           padding: '5px 8px',
           borderRadius: 'var(--radius-sm)',
           display: 'flex',
           alignItems: 'center',
           gap: '8px',
-          color: 'var(--text-muted)',
-          cursor: 'not-allowed',
+          color: 'var(--text-primary)',
+          cursor: 'pointer',
           textAlign: 'left',
           width: '100%',
-          opacity: 0.6,
         }}
+        onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'var(--bg-surface-hover)')}
+        onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
       >
-        <FolderOpen size={13} />
-        <span>Reveal in Explorer (Phase 4)</span>
+        <FolderOpen size={13} style={{ color: 'var(--accent-base)' }} />
+        <span>Reveal in File Explorer</span>
       </button>
 
       <button
