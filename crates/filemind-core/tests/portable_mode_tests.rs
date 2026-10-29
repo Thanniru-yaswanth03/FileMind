@@ -16,7 +16,11 @@ fn test_spaces_and_unicode_in_portable_path() {
 
     // 1. Connection and migrations must succeed in Unicode space path
     let conn = db.get_connection();
-    assert!(conn.is_ok(), "Database connection must succeed in path with spaces & Unicode: {:?}", conn.err());
+    assert!(
+        conn.is_ok(),
+        "Database connection must succeed in path with spaces & Unicode: {:?}",
+        conn.err()
+    );
     let conn = conn.unwrap();
 
     // 2. Structural integrity pragma must pass
@@ -26,13 +30,20 @@ fn test_spaces_and_unicode_in_portable_path() {
     // 3. Quarantine vault in Unicode path
     let vault_dir = unicode_folder.join("data").join("Quarantine");
     let quarantine = QuarantineManager::new(Some(vault_dir.clone()));
-    assert!(vault_dir.exists(), "Quarantine directory must be created in Unicode path");
+    assert!(
+        vault_dir.exists(),
+        "Quarantine directory must be created in Unicode path"
+    );
 
     // Test staging a file in the unicode vault
     let dummy_file = unicode_folder.join("sample test file.txt");
     fs::write(&dummy_file, "Portable Test Content").unwrap();
     let res = quarantine.quarantine_target(&dummy_file, "portable_test", &conn);
-    assert!(res.is_ok(), "Quarantine target must succeed in Unicode path: {:?}", res.err());
+    assert!(
+        res.is_ok(),
+        "Quarantine target must succeed in Unicode path: {:?}",
+        res.err()
+    );
 }
 
 #[test]
@@ -41,17 +52,28 @@ fn test_corrupt_database_automatic_self_healing() {
     let db_path = temp_root.path().join("filemind_corrupt_test.db");
 
     // Write invalid/garbage header to simulate unexpected power outage or sector corruption
-    fs::write(&db_path, b"CORRUPTED_SQLITE_HEADER_GARBAGE_BYTES_1234567890!@#$%^&*()").unwrap();
+    fs::write(
+        &db_path,
+        b"CORRUPTED_SQLITE_HEADER_GARBAGE_BYTES_1234567890!@#$%^&*()",
+    )
+    .unwrap();
 
     let db = Database::new(db_path.clone());
 
     // Connection must self-heal: backup corrupted DB and initialize fresh clean DB
     let conn = db.get_connection();
-    assert!(conn.is_ok(), "Database must self-heal on corruption and return fresh connection: {:?}", conn.err());
+    assert!(
+        conn.is_ok(),
+        "Database must self-heal on corruption and return fresh connection: {:?}",
+        conn.err()
+    );
 
     let conn = conn.unwrap();
     let is_ok = Database::verify_integrity(&conn).unwrap();
-    assert!(is_ok, "Recreated database must pass SQLite integrity checks");
+    assert!(
+        is_ok,
+        "Recreated database must pass SQLite integrity checks"
+    );
 
     // Verify that the corrupt file was quarantined to a backup file
     let entries = fs::read_dir(temp_root.path()).unwrap();
@@ -63,6 +85,8 @@ fn test_corrupt_database_automatic_self_healing() {
             break;
         }
     }
-    assert!(found_corrupt_backup, "Corrupted database file must be quarantined for post-mortem forensics");
+    assert!(
+        found_corrupt_backup,
+        "Corrupted database file must be quarantined for post-mortem forensics"
+    );
 }
-

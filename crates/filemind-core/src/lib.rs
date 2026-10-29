@@ -41,4 +41,3 @@ pub use scanner::{
 };
 pub use search::{DocumentExtractor, FtsEngine, MetadataSearchEngine, SecretFilter};
 pub use server::{open_containing_folder, start_server, AppState};
-

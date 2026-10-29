@@ -26,9 +26,7 @@ pub struct NativeFileMetadata {
 mod win32_api {
     use std::os::windows::ffi::OsStrExt;
     use std::path::Path;
-    use windows_sys::Win32::Foundation::{
-        CloseHandle, GENERIC_READ, HANDLE, INVALID_HANDLE_VALUE,
-    };
+    use windows_sys::Win32::Foundation::{CloseHandle, GENERIC_READ, HANDLE, INVALID_HANDLE_VALUE};
     use windows_sys::Win32::Storage::FileSystem::{
         CreateFileW, GetCompressedFileSizeW, GetFileInformationByHandle,
         BY_HANDLE_FILE_INFORMATION, FILE_ATTRIBUTE_HIDDEN, FILE_ATTRIBUTE_READONLY,
@@ -170,7 +168,16 @@ pub fn epoch_ms_to_iso(epoch_ms: u64) -> String {
     let days_in_months = [
         31,
         if leap { 29 } else { 28 },
-        31, 30, 31, 30, 31, 31, 30, 31, 30, 31,
+        31,
+        30,
+        31,
+        30,
+        31,
+        31,
+        30,
+        31,
+        30,
+        31,
     ];
     let mut m = 1;
     for &dim in &days_in_months {
@@ -190,7 +197,10 @@ pub fn epoch_ms_to_iso(epoch_ms: u64) -> String {
 
 /// Query native file metadata with deep Win32 inspection.
 /// Calculates logical size, physical allocated size, attributes, and NTFS ID.
-pub fn inspect_file(path: &Path, cluster_size_bytes: u64) -> Result<NativeFileMetadata, std::io::Error> {
+pub fn inspect_file(
+    path: &Path,
+    cluster_size_bytes: u64,
+) -> Result<NativeFileMetadata, std::io::Error> {
     let long_path = to_long_path(path);
 
     // Standard std::fs::symlink_metadata to avoid traversing links
@@ -199,8 +209,14 @@ pub fn inspect_file(path: &Path, cluster_size_bytes: u64) -> Result<NativeFileMe
     let is_dir = std_meta.is_dir();
 
     let ctime_ms = std_meta.created().map(system_time_to_epoch_ms).unwrap_or(0);
-    let mtime_ms = std_meta.modified().map(system_time_to_epoch_ms).unwrap_or(0);
-    let atime_ms = std_meta.accessed().map(system_time_to_epoch_ms).unwrap_or(0);
+    let mtime_ms = std_meta
+        .modified()
+        .map(system_time_to_epoch_ms)
+        .unwrap_or(0);
+    let atime_ms = std_meta
+        .accessed()
+        .map(system_time_to_epoch_ms)
+        .unwrap_or(0);
 
     let raw_attributes = std_meta.file_attributes();
     let is_hidden = (raw_attributes & win32_api::ATTR_HIDDEN) != 0;
@@ -219,7 +235,10 @@ pub fn inspect_file(path: &Path, cluster_size_bytes: u64) -> Result<NativeFileMe
             let high = info.nFileIndexHigh as u64;
             let low = info.nFileIndexLow as u64;
             let file_id_u64 = (high << 32) | low;
-            ntfs_file_id = Some(format!("{:08X}:{:016X}", info.dwVolumeSerialNumber, file_id_u64));
+            ntfs_file_id = Some(format!(
+                "{:08X}:{:016X}",
+                info.dwVolumeSerialNumber, file_id_u64
+            ));
             volume_serial = Some(info.dwVolumeSerialNumber);
             number_of_links = info.nNumberOfLinks;
         }

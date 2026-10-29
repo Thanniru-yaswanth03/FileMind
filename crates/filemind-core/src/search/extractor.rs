@@ -6,7 +6,7 @@ use crate::adapter::path::to_long_path;
 use crate::search::security::SecretFilter;
 
 pub const MAX_INDEXABLE_FILE_SIZE: u64 = 5 * 1024 * 1024; // 5 MB max document size
-pub const MAX_EXTRACTED_CHARACTERS: usize = 100_000;      // 100K char limit
+pub const MAX_EXTRACTED_CHARACTERS: usize = 100_000; // 100K char limit
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum ExtractionStatus {
@@ -58,7 +58,11 @@ impl DocumentExtractor {
         }
 
         // 2. Check extension support
-        let ext = match path.extension().and_then(|e| e.to_str()).map(|s| s.to_lowercase()) {
+        let ext = match path
+            .extension()
+            .and_then(|e| e.to_str())
+            .map(|s| s.to_lowercase())
+        {
             Some(e) => e,
             None => {
                 return ExtractionResult {
@@ -203,4 +207,3 @@ impl DocumentExtractor {
         }
     }
 }
-

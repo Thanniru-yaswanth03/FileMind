@@ -38,23 +38,23 @@ impl DryRunEngine {
 
         let rows = stmt
             .query_map(params![plan_id], |row| {
-            let item_id: String = row.get(0)?;
-            let path: String = row.get(1)?;
-            let canonical_path: String = row.get(2)?;
-            let _logical_size: i64 = row.get(3)?;
-            let _physical_size: i64 = row.get(4)?;
-            let operation_str: String = row.get(5)?;
-            let is_reversible: i32 = row.get(7)?;
+                let item_id: String = row.get(0)?;
+                let path: String = row.get(1)?;
+                let canonical_path: String = row.get(2)?;
+                let _logical_size: i64 = row.get(3)?;
+                let _physical_size: i64 = row.get(4)?;
+                let operation_str: String = row.get(5)?;
+                let is_reversible: i32 = row.get(7)?;
 
-            Ok(ItemRow {
-                item_id,
-                path,
-                canonical_path,
-                _logical_size,
-                _physical_size,
-                operation_str,
-                is_reversible,
-            })
+                Ok(ItemRow {
+                    item_id,
+                    path,
+                    canonical_path,
+                    _logical_size,
+                    _physical_size,
+                    operation_str,
+                    is_reversible,
+                })
             })
             .map_err(|e| format!("Database error executing query: {}", e))?;
 
@@ -85,7 +85,8 @@ impl DryRunEngine {
             // 1. Existence check
             if !path_obj.exists() {
                 can_execute = false;
-                conflicts_detected.push(format!("File disappeared or inaccessible: '{}'", item.path));
+                conflicts_detected
+                    .push(format!("File disappeared or inaccessible: '{}'", item.path));
                 predictions.push(DryRunItemPrediction {
                     item_id: item.item_id,
                     path: item.path,
@@ -93,7 +94,9 @@ impl DryRunEngine {
                     can_proceed: false,
                     reversibility,
                     expected_freed_bytes: 0,
-                    warning: Some("Target disappeared from disk between planning and dry-run".to_string()),
+                    warning: Some(
+                        "Target disappeared from disk between planning and dry-run".to_string(),
+                    ),
                 });
                 continue;
             }
@@ -103,7 +106,10 @@ impl DryRunEngine {
             let meta_res = inspect_file(&long_p, 4096);
             if let Err(ref e) = meta_res {
                 can_execute = false;
-                conflicts_detected.push(format!("Permission denied opening handle: '{}' ({})", item.path, e));
+                conflicts_detected.push(format!(
+                    "Permission denied opening handle: '{}' ({})",
+                    item.path, e
+                ));
                 predictions.push(DryRunItemPrediction {
                     item_id: item.item_id,
                     path: item.path,
@@ -124,7 +130,10 @@ impl DryRunEngine {
             // 3. Process Lock check
             if meta.is_locked {
                 can_execute = false;
-                conflicts_detected.push(format!("Process lock active: '{}' is held open by another process", item.path));
+                conflicts_detected.push(format!(
+                    "Process lock active: '{}' is held open by another process",
+                    item.path
+                ));
                 predictions.push(DryRunItemPrediction {
                     item_id: item.item_id,
                     path: item.path,
@@ -132,7 +141,9 @@ impl DryRunEngine {
                     can_proceed: false,
                     reversibility,
                     expected_freed_bytes: 0,
-                    warning: Some("Target is actively locked with exclusive sharing flags".to_string()),
+                    warning: Some(
+                        "Target is actively locked with exclusive sharing flags".to_string(),
+                    ),
                 });
                 continue;
             }
@@ -175,7 +186,11 @@ impl DryRunEngine {
         }
 
         // Update plan state in SQLite
-        let new_status = if can_execute { "dry_run_validated" } else { "draft" };
+        let new_status = if can_execute {
+            "dry_run_validated"
+        } else {
+            "draft"
+        };
         let _ = conn.execute(
             "UPDATE cleanup_plans SET status = ?1 WHERE plan_id = ?2",
             params![new_status, plan_id],

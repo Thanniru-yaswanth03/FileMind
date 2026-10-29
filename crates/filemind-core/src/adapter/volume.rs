@@ -24,7 +24,10 @@ mod win32_volume {
     };
 
     pub fn to_wide_null(s: &str) -> Vec<u16> {
-        OsStr::new(s).encode_wide().chain(std::iter::once(0)).collect()
+        OsStr::new(s)
+            .encode_wide()
+            .chain(std::iter::once(0))
+            .collect()
     }
 
     pub fn get_disk_space(root_str: &str) -> Option<(u64, u64, u64)> {
@@ -130,7 +133,8 @@ mod win32_volume {
 
 /// Extract drive root path from any path (e.g., "C:\Users\test" -> "C:\", "\\?\D:\data" -> "D:\")
 pub fn get_drive_root(path: &Path) -> String {
-    let clean = crate::adapter::path::strip_verbatim_prefix(&path.to_string_lossy()).replace('/', "\\");
+    let clean =
+        crate::adapter::path::strip_verbatim_prefix(&path.to_string_lossy()).replace('/', "\\");
     if clean.len() >= 2 && clean.chars().nth(1) == Some(':') {
         let letter = clean.chars().next().unwrap_or('C').to_ascii_uppercase();
         format!("{}:\\", letter)
@@ -142,7 +146,12 @@ pub fn get_drive_root(path: &Path) -> String {
 /// Query complete volume information for a specific path or volume root
 pub fn query_volume_info(path: &Path) -> Result<VolumeInfo, std::io::Error> {
     let root_str = get_drive_root(path);
-    let drive_letter = root_str.chars().next().unwrap_or('C').to_ascii_uppercase().to_string();
+    let drive_letter = root_str
+        .chars()
+        .next()
+        .unwrap_or('C')
+        .to_ascii_uppercase()
+        .to_string();
 
     let sys_drive = std::env::var("SystemDrive").unwrap_or_else(|_| "C:".to_string());
     let is_system_drive = sys_drive.to_uppercase().starts_with(&drive_letter);
@@ -165,7 +174,11 @@ pub fn query_volume_info(path: &Path) -> Result<VolumeInfo, std::io::Error> {
         root_path: root_str,
         drive_letter,
         volume_label: final_label,
-        filesystem_type: if fs.is_empty() { "NTFS".to_string() } else { fs },
+        filesystem_type: if fs.is_empty() {
+            "NTFS".to_string()
+        } else {
+            fs
+        },
         cluster_size_bytes: cluster_size,
         total_bytes: total,
         free_bytes: free,

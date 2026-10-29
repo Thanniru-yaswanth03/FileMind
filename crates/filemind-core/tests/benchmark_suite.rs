@@ -43,7 +43,11 @@ fn bench_blake3_streaming_throughput() {
     println!("Reported Elapsed: {} ms", elapsed_ms);
     println!("BLAKE3 Throughput: {:.2} MB/s", throughput_mb_s);
 
-    assert!(throughput_mb_s > 100.0, "BLAKE3 hashing throughput too low: {:.2} MB/s", throughput_mb_s);
+    assert!(
+        throughput_mb_s > 100.0,
+        "BLAKE3 hashing throughput too low: {:.2} MB/s",
+        throughput_mb_s
+    );
 }
 
 #[test]
@@ -80,7 +84,11 @@ fn bench_scan_throughput_and_cancellation_latency() {
     println!("Scan Throughput: {:.2} files/sec", files_per_sec);
 
     assert_eq!(result.total_files, total_expected as u64);
-    assert!(files_per_sec > 600.0, "Scan throughput too low: {:.2} files/sec", files_per_sec);
+    assert!(
+        files_per_sec > 600.0,
+        "Scan throughput too low: {:.2} files/sec",
+        files_per_sec
+    );
 
     // 2. Cancellation Latency
     let cancel_flag = Arc::new(AtomicBool::new(false));
@@ -101,11 +109,18 @@ fn bench_scan_throughput_and_cancellation_latency() {
 
     println!("\n=== BENCHMARK: Scanner Cancellation Latency ===");
     println!("Cancellation Latency: {:?}", cancel_latency);
-    println!("Items scanned before halt: {}", cancelled_result.total_files);
+    println!(
+        "Items scanned before halt: {}",
+        cancelled_result.total_files
+    );
     println!("Is Cancelled Flag: {}", cancelled_result.is_cancelled);
 
     assert!(cancelled_result.is_cancelled);
-    assert!(cancel_latency.as_millis() < 50, "Cancellation took too long: {:?}", cancel_latency);
+    assert!(
+        cancel_latency.as_millis() < 50,
+        "Cancellation took too long: {:?}",
+        cancel_latency
+    );
 }
 
 #[test]
@@ -114,10 +129,22 @@ fn bench_fts5_indexing_and_search_latency() {
     let root = tmp.path();
 
     let docs = [
-        ("report_q1.txt", "Quarterly earnings financial statement for review and storage audit"),
-        ("architecture.md", "System design notes regarding safety guardian rules and lockfiles"),
-        ("server_log.txt", "Connection accepted from 127.0.0.1 on port 41732 with OK status"),
-        ("readme.txt", "High performance native desktop utility for Windows filesystem intelligence"),
+        (
+            "report_q1.txt",
+            "Quarterly earnings financial statement for review and storage audit",
+        ),
+        (
+            "architecture.md",
+            "System design notes regarding safety guardian rules and lockfiles",
+        ),
+        (
+            "server_log.txt",
+            "Connection accepted from 127.0.0.1 on port 41732 with OK status",
+        ),
+        (
+            "readme.txt",
+            "High performance native desktop utility for Windows filesystem intelligence",
+        ),
     ];
 
     for i in 0..200 {
@@ -137,8 +164,14 @@ fn bench_fts5_indexing_and_search_latency() {
     let index_duration = index_start.elapsed();
 
     println!("\n=== BENCHMARK: FTS5 Full-Text Indexing & Search ===");
-    println!("Indexed {} documents in: {:?}", prog.indexed_documents, index_duration);
-    println!("Indexing Throughput: {:.2} docs/sec", (prog.indexed_documents as f64) / index_duration.as_secs_f64());
+    println!(
+        "Indexed {} documents in: {:?}",
+        prog.indexed_documents, index_duration
+    );
+    println!(
+        "Indexing Throughput: {:.2} docs/sec",
+        (prog.indexed_documents as f64) / index_duration.as_secs_f64()
+    );
 
     // Measure Search Latency
     let query = ContentSearchQuery {
@@ -154,7 +187,11 @@ fn bench_fts5_indexing_and_search_latency() {
     println!("Matches Returned: {}", results.total_matches);
 
     assert!(results.total_matches > 0);
-    assert!(search_duration.as_millis() < 50, "FTS5 search exceeded 50ms: {:?}", search_duration);
+    assert!(
+        search_duration.as_millis() < 50,
+        "FTS5 search exceeded 50ms: {:?}",
+        search_duration
+    );
 }
 
 #[test]
@@ -194,5 +231,9 @@ fn bench_sqlite_metadata_pagination_latency() {
     println!("Page Item Count: {}", res.files.len());
 
     assert_eq!(res.files.len(), 100);
-    assert!(query_duration.as_millis() < 30, "Query pagination exceeded 30ms: {:?}", query_duration);
+    assert!(
+        query_duration.as_millis() < 30,
+        "Query pagination exceeded 30ms: {:?}",
+        query_duration
+    );
 }

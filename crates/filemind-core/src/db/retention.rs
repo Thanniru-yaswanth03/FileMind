@@ -25,7 +25,10 @@ impl RetentionManager {
     }
 
     /// Keep only the latest `max_sessions` sessions for each root path
-    pub fn keep_latest_sessions_per_root(conn: &mut Connection, max_sessions: usize) -> Result<usize> {
+    pub fn keep_latest_sessions_per_root(
+        conn: &mut Connection,
+        max_sessions: usize,
+    ) -> Result<usize> {
         let mut stmt = conn.prepare("SELECT DISTINCT root_path FROM scan_sessions")?;
         let roots: Vec<String> = stmt
             .query_map([], |r| r.get(0))?
@@ -52,4 +55,3 @@ impl RetentionManager {
         Ok(total_deleted)
     }
 }
-

@@ -3,9 +3,8 @@ use std::path::PathBuf;
 
 use crate::adapter::metadata::epoch_ms_to_iso;
 use crate::models::{
-    CategoryBreakdownDto, ErrorKind, FileAttributesDto, FileCategory, FileItemDto,
-    FileListQuery, FileListResponse, FolderRankingDto, RiskTier, ScanErrorDto,
-    ScanSessionDto, SessionStatus,
+    CategoryBreakdownDto, ErrorKind, FileAttributesDto, FileCategory, FileItemDto, FileListQuery,
+    FileListResponse, FolderRankingDto, RiskTier, ScanErrorDto, ScanSessionDto, SessionStatus,
 };
 use crate::scanner::walker::ScanResult;
 
@@ -24,11 +23,10 @@ impl Database {
             let _ = std::fs::create_dir_all(parent);
         }
 
-        let conn_res = Connection::open(&self.db_path)
-            .and_then(|mut c| {
-                crate::db::migrations::Migrator::migrate(&mut c)?;
-                Ok(c)
-            });
+        let conn_res = Connection::open(&self.db_path).and_then(|mut c| {
+            crate::db::migrations::Migrator::migrate(&mut c)?;
+            Ok(c)
+        });
 
         match conn_res {
             Ok(conn) => {
@@ -57,7 +55,11 @@ impl Database {
                     ];
                     for wal in &wal_candidates {
                         if wal.exists() {
-                            let wal_backup = std::path::PathBuf::from(format!("{}.corrupt_{}.wal", self.db_path.display(), now));
+                            let wal_backup = std::path::PathBuf::from(format!(
+                                "{}.corrupt_{}.wal",
+                                self.db_path.display(),
+                                now
+                            ));
                             let _ = std::fs::rename(wal, wal_backup);
                             break;
                         }
@@ -69,7 +71,11 @@ impl Database {
                     ];
                     for shm in &shm_candidates {
                         if shm.exists() {
-                            let shm_backup = std::path::PathBuf::from(format!("{}.corrupt_{}.shm", self.db_path.display(), now));
+                            let shm_backup = std::path::PathBuf::from(format!(
+                                "{}.corrupt_{}.shm",
+                                self.db_path.display(),
+                                now
+                            ));
                             let _ = std::fs::rename(shm, shm_backup);
                             break;
                         }
@@ -110,7 +116,8 @@ impl Database {
             .and_then(|p| p.parent().map(|p| p.to_path_buf()))
             .unwrap_or_else(|| PathBuf::from("."));
 
-        if exe_dir.join("portable.flag").exists() || std::path::Path::new("portable.flag").exists() {
+        if exe_dir.join("portable.flag").exists() || std::path::Path::new("portable.flag").exists()
+        {
             let data_dir = exe_dir.join("data");
             let _ = std::fs::create_dir_all(&data_dir);
             return data_dir.join("filemind.db");
@@ -238,7 +245,11 @@ impl Database {
                 let raw_attr = if file.attributes.is_hidden { 2 } else { 0 }
                     | if file.attributes.is_system { 4 } else { 0 }
                     | if file.attributes.is_read_only { 1 } else { 0 }
-                    | if file.attributes.is_reparse_point { 1024 } else { 0 };
+                    | if file.attributes.is_reparse_point {
+                        1024
+                    } else {
+                        0
+                    };
 
                 let mtime_ms = file.mtime_epoch_ms.unwrap_or(0);
                 stmt.execute(params![
@@ -295,7 +306,10 @@ impl Database {
     }
 
     /// Retrieve the most recent completed or partial scan session
-    pub fn get_latest_session(conn: &Connection, root_path: Option<&str>) -> Result<Option<ScanSessionDto>> {
+    pub fn get_latest_session(
+        conn: &Connection,
+        root_path: Option<&str>,
+    ) -> Result<Option<ScanSessionDto>> {
         let sql = match root_path {
             Some(_) => {
                 "SELECT session_id, root_path, started_at, completed_at, status,
@@ -455,9 +469,8 @@ impl Database {
         );
 
         let param_refs: Vec<&dyn rusqlite::ToSql> = params_vec.iter().map(|p| p.as_ref()).collect();
-        let (total_count, total_bytes): (i64, i64) = conn.query_row(&count_sql, &param_refs[..], |r| {
-            Ok((r.get(0)?, r.get(1)?))
-        })?;
+        let (total_count, total_bytes): (i64, i64) =
+            conn.query_row(&count_sql, &param_refs[..], |r| Ok((r.get(0)?, r.get(1)?)))?;
 
         // Order by
         let sort_column = match query.sort_by.as_deref() {
@@ -563,7 +576,11 @@ impl Database {
     }
 
     /// Retrieve the top space-consuming folders for a session
-    pub fn get_top_folders(conn: &Connection, session_id: &str, limit: u32) -> Result<Vec<FolderRankingDto>> {
+    pub fn get_top_folders(
+        conn: &Connection,
+        session_id: &str,
+        limit: u32,
+    ) -> Result<Vec<FolderRankingDto>> {
         let total_size: i64 = conn
             .query_row(
                 "SELECT COALESCE(SUM(total_size_bytes), 1) FROM directories WHERE session_id = ?1 AND depth = 0",
@@ -607,7 +624,10 @@ impl Database {
     }
 
     /// Retrieve storage breakdown aggregated by file category
-    pub fn get_category_breakdown(conn: &Connection, session_id: &str) -> Result<Vec<CategoryBreakdownDto>> {
+    pub fn get_category_breakdown(
+        conn: &Connection,
+        session_id: &str,
+    ) -> Result<Vec<CategoryBreakdownDto>> {
         let total_bytes: i64 = conn
             .query_row(
                 "SELECT COALESCE(SUM(logical_size_bytes), 1) FROM files WHERE session_id = ?1",
@@ -661,7 +681,11 @@ impl Database {
     }
 
     /// Retrieve errors encountered during a specific scan session
-    pub fn get_session_errors(conn: &Connection, session_id: &str, limit: u32) -> Result<Vec<ScanErrorDto>> {
+    pub fn get_session_errors(
+        conn: &Connection,
+        session_id: &str,
+        limit: u32,
+    ) -> Result<Vec<ScanErrorDto>> {
         let mut stmt = conn.prepare(
             r#"SELECT error_id, session_id, path, error_kind, error_message, occurred_at
                FROM scan_errors
@@ -704,12 +728,18 @@ impl Database {
     }
 
     /// Record a safety audit entry
-    pub fn record_safety_audit(conn: &Connection, record: &crate::models::SafetyAuditRecordDto) -> Result<i64> {
+    pub fn record_safety_audit(
+        conn: &Connection,
+        record: &crate::models::SafetyAuditRecordDto,
+    ) -> Result<i64> {
         crate::safety::AuditLogger::record_audit(conn, record)
     }
 
     /// Retrieve recent safety audit entries
-    pub fn get_recent_safety_audits(conn: &Connection, limit: u32) -> Result<Vec<crate::models::SafetyAuditRecordDto>> {
+    pub fn get_recent_safety_audits(
+        conn: &Connection,
+        limit: u32,
+    ) -> Result<Vec<crate::models::SafetyAuditRecordDto>> {
         crate::safety::AuditLogger::fetch_recent(conn, limit)
     }
 
@@ -717,7 +747,10 @@ impl Database {
     // Phase 7: Automation Repository Methods
     // ==========================================
 
-    pub fn insert_automation_rule(conn: &Connection, rule: &crate::models::AutomationRuleDto) -> Result<()> {
+    pub fn insert_automation_rule(
+        conn: &Connection,
+        rule: &crate::models::AutomationRuleDto,
+    ) -> Result<()> {
         let trigger_type = match &rule.trigger {
             crate::models::AutomationTrigger::Schedule { .. } => "schedule",
             crate::models::AutomationTrigger::DiskSpaceThreshold { .. } => "disk_space_threshold",
@@ -727,11 +760,16 @@ impl Database {
             crate::models::AutomationTrigger::Manual => "manual",
         };
 
-        let trigger_json = serde_json::to_string(&rule.trigger).unwrap_or_else(|_| "{}".to_string());
-        let conditions_json = serde_json::to_string(&rule.conditions).unwrap_or_else(|_| "[]".to_string());
-        let actions_json = serde_json::to_string(&rule.actions).unwrap_or_else(|_| "[]".to_string());
-        let scope_json = serde_json::to_string(&rule.scope_paths).unwrap_or_else(|_| "[]".to_string());
-        let exclusion_json = serde_json::to_string(&rule.exclusion_paths).unwrap_or_else(|_| "[]".to_string());
+        let trigger_json =
+            serde_json::to_string(&rule.trigger).unwrap_or_else(|_| "{}".to_string());
+        let conditions_json =
+            serde_json::to_string(&rule.conditions).unwrap_or_else(|_| "[]".to_string());
+        let actions_json =
+            serde_json::to_string(&rule.actions).unwrap_or_else(|_| "[]".to_string());
+        let scope_json =
+            serde_json::to_string(&rule.scope_paths).unwrap_or_else(|_| "[]".to_string());
+        let exclusion_json =
+            serde_json::to_string(&rule.exclusion_paths).unwrap_or_else(|_| "[]".to_string());
 
         conn.execute(
             r#"INSERT OR REPLACE INTO automation_rules (
@@ -771,7 +809,9 @@ impl Database {
         Ok(())
     }
 
-    pub fn list_automation_rules(conn: &Connection) -> Result<Vec<crate::models::AutomationRuleDto>> {
+    pub fn list_automation_rules(
+        conn: &Connection,
+    ) -> Result<Vec<crate::models::AutomationRuleDto>> {
         let mut stmt = conn.prepare(
             r#"SELECT rule_id, name, description, is_enabled, trigger_config_json,
                       conditions_json, actions_json, scope_paths_json, exclusion_paths_json,
@@ -779,7 +819,7 @@ impl Database {
                       max_retries, cooldown_seconds, max_files_per_run, max_bytes_per_run,
                       last_run_at, last_status, created_at, updated_at
                FROM automation_rules
-               ORDER BY created_at ASC"#
+               ORDER BY created_at ASC"#,
         )?;
 
         let rows = stmt.query_map([], |row| {
@@ -847,7 +887,10 @@ impl Database {
         Ok(list)
     }
 
-    pub fn get_automation_rule(conn: &Connection, rule_id: &str) -> Result<Option<crate::models::AutomationRuleDto>> {
+    pub fn get_automation_rule(
+        conn: &Connection,
+        rule_id: &str,
+    ) -> Result<Option<crate::models::AutomationRuleDto>> {
         let rules = Self::list_automation_rules(conn)?;
         Ok(rules.into_iter().find(|r| r.rule_id == rule_id))
     }
@@ -866,11 +909,19 @@ impl Database {
     }
 
     pub fn delete_automation_rule(conn: &Connection, rule_id: &str) -> Result<()> {
-        conn.execute("DELETE FROM automation_rules WHERE rule_id = ?1", params![rule_id])?;
+        conn.execute(
+            "DELETE FROM automation_rules WHERE rule_id = ?1",
+            params![rule_id],
+        )?;
         Ok(())
     }
 
-    pub fn update_rule_last_run(conn: &Connection, rule_id: &str, status: &str, epoch_ms: u64) -> Result<()> {
+    pub fn update_rule_last_run(
+        conn: &Connection,
+        rule_id: &str,
+        status: &str,
+        epoch_ms: u64,
+    ) -> Result<()> {
         conn.execute(
             "UPDATE automation_rules SET last_run_at = ?1, last_status = ?2, updated_at = ?1 WHERE rule_id = ?3",
             params![epoch_ms as i64, status, rule_id],
@@ -882,8 +933,10 @@ impl Database {
         conn: &Connection,
         hist: &crate::models::AutomationExecutionHistoryDto,
     ) -> Result<()> {
-        let actions_json = serde_json::to_string(&hist.actions_attempted).unwrap_or_else(|_| "[]".to_string());
-        let policies_json = serde_json::to_string(&hist.policy_decisions).unwrap_or_else(|_| "[]".to_string());
+        let actions_json =
+            serde_json::to_string(&hist.actions_attempted).unwrap_or_else(|_| "[]".to_string());
+        let policies_json =
+            serde_json::to_string(&hist.policy_decisions).unwrap_or_else(|_| "[]".to_string());
 
         conn.execute(
             r#"INSERT INTO automation_execution_history (
@@ -943,7 +996,8 @@ impl Database {
 
         if let Some(rid) = rule_id {
             let mut stmt = conn.prepare(sql)?;
-            let rows = stmt.query_map(params![rid, limit as i64], |row| Self::map_history_row(row))?;
+            let rows =
+                stmt.query_map(params![rid, limit as i64], |row| Self::map_history_row(row))?;
             for r in rows {
                 list.push(r?);
             }
@@ -958,7 +1012,9 @@ impl Database {
         Ok(list)
     }
 
-    fn map_history_row(row: &rusqlite::Row) -> rusqlite::Result<crate::models::AutomationExecutionHistoryDto> {
+    fn map_history_row(
+        row: &rusqlite::Row,
+    ) -> rusqlite::Result<crate::models::AutomationExecutionHistoryDto> {
         let run_id: String = row.get(0)?;
         let rule_id: String = row.get(1)?;
         let rule_name: String = row.get(2)?;
@@ -1001,7 +1057,8 @@ impl Database {
 
     /// Seed predefined default automation rules if table is empty
     pub fn seed_default_automation_rules_if_empty(conn: &Connection) -> Result<()> {
-        let count: i64 = conn.query_row("SELECT COUNT(*) FROM automation_rules", [], |r| r.get(0))?;
+        let count: i64 =
+            conn.query_row("SELECT COUNT(*) FROM automation_rules", [], |r| r.get(0))?;
         if count > 0 {
             return Ok(());
         }

@@ -3,11 +3,13 @@ use std::collections::HashMap;
 use std::path::PathBuf;
 
 use crate::adapter::path::normalize_path;
-use crate::duplicate::hashing::{compute_file_blake3_streaming, compute_prefix_hash, verify_byte_by_byte, HashingError};
+use crate::duplicate::hashing::{
+    compute_file_blake3_streaming, compute_prefix_hash, verify_byte_by_byte, HashingError,
+};
 use crate::duplicate::heuristics::LocationEvaluator;
 use crate::models::{
-    DuplicateConfidence, DuplicateFileDto, DuplicateFileStatus, DuplicateGroupDto, DuplicateScanRequest,
-    DuplicateScanResponse, LocationTag,
+    DuplicateConfidence, DuplicateFileDto, DuplicateFileStatus, DuplicateGroupDto,
+    DuplicateScanRequest, DuplicateScanResponse, LocationTag,
 };
 
 #[derive(Debug, Clone)]
@@ -115,7 +117,10 @@ impl DuplicatePipeline {
                         }
                     }
                 } else {
-                    prefix_buckets.entry("small_file".to_string()).or_default().push(rec);
+                    prefix_buckets
+                        .entry("small_file".to_string())
+                        .or_default()
+                        .push(rec);
                 }
             }
 
@@ -125,17 +130,20 @@ impl DuplicatePipeline {
                     continue;
                 }
 
-                let mut hash_buckets: HashMap<String, Vec<(CandidateRecord, String, DuplicateFileStatus)>> =
-                    HashMap::new();
+                let mut hash_buckets: HashMap<
+                    String,
+                    Vec<(CandidateRecord, String, DuplicateFileStatus)>,
+                > = HashMap::new();
 
                 for rec in potential_dupes {
                     let full_path = PathBuf::from(&rec.directory_path).join(&rec.filename);
                     match compute_file_blake3_streaming(&full_path) {
                         Ok((hash, _read_bytes, _mtime)) => {
-                            hash_buckets
-                                .entry(hash.clone())
-                                .or_default()
-                                .push((rec, hash, DuplicateFileStatus::Ok));
+                            hash_buckets.entry(hash.clone()).or_default().push((
+                                rec,
+                                hash,
+                                DuplicateFileStatus::Ok,
+                            ));
                         }
                         Err(HashingError::ModifiedDuringStream { .. }) => {
                             // File modified during scan; record as changed
@@ -167,7 +175,8 @@ impl DuplicatePipeline {
                     let mut is_byte_verified = false;
 
                     if verify_byte && items.len() >= 2 {
-                        let base_path = PathBuf::from(&items[0].0.directory_path).join(&items[0].0.filename);
+                        let base_path =
+                            PathBuf::from(&items[0].0.directory_path).join(&items[0].0.filename);
                         let mut all_match = true;
 
                         for other in items.iter().skip(1) {
@@ -196,7 +205,8 @@ impl DuplicatePipeline {
                         .collect();
 
                     let path_refs: Vec<&str> = paths.iter().map(|s| s.as_str()).collect();
-                    let (recommended_idx, primary_rationale) = LocationEvaluator::rank_copies(&path_refs);
+                    let (recommended_idx, primary_rationale) =
+                        LocationEvaluator::rank_copies(&path_refs);
 
                     let mut file_dtos: Vec<DuplicateFileDto> = Vec::new();
 
@@ -311,5 +321,12 @@ fn format_timestamp(epoch_ms: u64) -> String {
     let day_of_year = days % 365;
     let month = (day_of_year / 30) + 1;
     let day = (day_of_year % 30) + 1;
-    format!("{:04}-{:02}-{:02} {:02}:{:02}", approx_year, month.min(12), day.min(31), hours, minutes)
+    format!(
+        "{:04}-{:02}-{:02} {:02}:{:02}",
+        approx_year,
+        month.min(12),
+        day.min(31),
+        hours,
+        minutes
+    )
 }

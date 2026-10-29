@@ -10,7 +10,10 @@ pub fn open_containing_folder(target_path: &str) -> Result<(), String> {
     let p = Path::new(&clean_path);
 
     if !p.exists() {
-        return Err(format!("Cannot open containing folder: Path does not exist '{}'", clean_path));
+        return Err(format!(
+            "Cannot open containing folder: Path does not exist '{}'",
+            clean_path
+        ));
     }
 
     let norm_path = normalize_path(p);
@@ -24,4 +27,3 @@ pub fn open_containing_folder(target_path: &str) -> Result<(), String> {
     drop(status);
     Ok(())
 }
-

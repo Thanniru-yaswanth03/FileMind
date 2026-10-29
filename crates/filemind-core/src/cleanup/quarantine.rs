@@ -31,7 +31,9 @@ impl QuarantineManager {
 
             let local_app_data = std::env::var("LOCALAPPDATA")
                 .unwrap_or_else(|_| r"C:\Users\Default\AppData\Local".to_string());
-            PathBuf::from(local_app_data).join("FileMind").join("Quarantine")
+            PathBuf::from(local_app_data)
+                .join("FileMind")
+                .join("Quarantine")
         });
 
         let _ = fs::create_dir_all(&dir);
@@ -90,8 +92,13 @@ impl QuarantineManager {
         let quarantine_dest = self.vault_dir.join(&vault_filename);
 
         // Calculate cryptographic hash if regular file under 100MB
-        let blake3_hash = if !meta.is_directory && meta.logical_size_bytes > 0 && meta.logical_size_bytes < 100 * 1024 * 1024 {
-            compute_file_blake3_streaming(path_obj).ok().map(|(hash, _, _)| hash)
+        let blake3_hash = if !meta.is_directory
+            && meta.logical_size_bytes > 0
+            && meta.logical_size_bytes < 100 * 1024 * 1024
+        {
+            compute_file_blake3_streaming(path_obj)
+                .ok()
+                .map(|(hash, _, _)| hash)
         } else {
             None
         };
@@ -102,7 +109,8 @@ impl QuarantineManager {
             &quarantine_dest,
             meta.is_directory,
             blake3_hash.as_deref(),
-        ).map_err(|e| format!("Quarantine transfer failed: {}", e))?;
+        )
+        .map_err(|e| format!("Quarantine transfer failed: {}", e))?;
 
         let raw_attributes = if meta.is_read_only { 1 } else { 0 }
             | if meta.is_hidden { 2 } else { 0 }
@@ -207,7 +215,10 @@ impl QuarantineManager {
                 original_path: record.original_path.clone(),
                 restored_path: String::new(),
                 success: false,
-                error: Some(format!("Quarantined file missing from vault: '{}'", record.quarantine_path)),
+                error: Some(format!(
+                    "Quarantined file missing from vault: '{}'",
+                    record.quarantine_path
+                )),
             };
         }
 
@@ -236,7 +247,12 @@ impl QuarantineManager {
 
         // Move back to destination using verified atomic rename or streaming copy
         let is_dir = quar_path.is_dir();
-        if let Err(e) = verified_quarantine_move(quar_path, &destination, is_dir, record.blake3_hash.as_deref()) {
+        if let Err(e) = verified_quarantine_move(
+            quar_path,
+            &destination,
+            is_dir,
+            record.blake3_hash.as_deref(),
+        ) {
             return RestoreItemResult {
                 quarantine_id: quarantine_id.to_string(),
                 original_path: record.original_path.clone(),
@@ -287,7 +303,11 @@ impl QuarantineManager {
     }
 
     /// Retrieves an individual quarantine record
-    pub fn get_record(&self, quarantine_id: &str, conn: &Connection) -> SqlResult<Option<QuarantineRecordDto>> {
+    pub fn get_record(
+        &self,
+        quarantine_id: &str,
+        conn: &Connection,
+    ) -> SqlResult<Option<QuarantineRecordDto>> {
         let mut stmt = conn.prepare(
             r#"
             SELECT
@@ -495,19 +515,28 @@ pub fn verified_quarantine_move(
 
         if let Err(e) = copy_dir_recursive(source, &staging_dir) {
             let _ = fs::remove_dir_all(&staging_dir);
-            return Err(format!("Failed to copy directory to quarantine staging: {}", e));
+            return Err(format!(
+                "Failed to copy directory to quarantine staging: {}",
+                e
+            ));
         }
 
         let (src_files, src_bytes) = count_dir_entries(source);
         let (stage_files, stage_bytes) = count_dir_entries(&staging_dir);
         if src_files != stage_files || src_bytes != stage_bytes {
             let _ = fs::remove_dir_all(&staging_dir);
-            return Err("Cross-volume directory copy verification failed: file count or size mismatch".to_string());
+            return Err(
+                "Cross-volume directory copy verification failed: file count or size mismatch"
+                    .to_string(),
+            );
         }
 
         if let Err(e) = fs::rename(&staging_dir, destination) {
             let _ = fs::remove_dir_all(&staging_dir);
-            return Err(format!("Failed to finalize quarantine directory move: {}", e));
+            return Err(format!(
+                "Failed to finalize quarantine directory move: {}",
+                e
+            ));
         }
 
         if let Err(e) = fs::remove_dir_all(source) {
@@ -521,7 +550,8 @@ pub fn verified_quarantine_move(
             let _ = fs::remove_file(&staging_file);
         }
 
-        let pre_meta = fs::metadata(source).map_err(|e| format!("Failed to read source metadata: {}", e))?;
+        let pre_meta =
+            fs::metadata(source).map_err(|e| format!("Failed to read source metadata: {}", e))?;
         let pre_size = pre_meta.len();
         let pre_mtime = pre_meta.modified().ok();
 
@@ -533,31 +563,49 @@ pub fn verified_quarantine_move(
             }
         };
 
-        let post_meta = fs::metadata(source).map_err(|e| format!("Failed to re-verify source metadata: {}", e))?;
-        if post_meta.len() != pre_size || (pre_mtime.is_some() && post_meta.modified().ok() != pre_mtime) {
+        let post_meta = fs::metadata(source)
+            .map_err(|e| format!("Failed to re-verify source metadata: {}", e))?;
+        if post_meta.len() != pre_size
+            || (pre_mtime.is_some() && post_meta.modified().ok() != pre_mtime)
+        {
             let _ = fs::remove_file(&staging_file);
-            return Err("Aborting quarantine: Source file was modified concurrently during copy".to_string());
+            return Err(
+                "Aborting quarantine: Source file was modified concurrently during copy"
+                    .to_string(),
+            );
         }
 
         if copied_bytes != pre_size {
             let _ = fs::remove_file(&staging_file);
-            return Err(format!("Cross-volume copy byte count mismatch: expected {}, copied {}", pre_size, copied_bytes));
+            return Err(format!(
+                "Cross-volume copy byte count mismatch: expected {}, copied {}",
+                pre_size, copied_bytes
+            ));
         }
 
         if let Some(expected) = expected_hash {
             if dest_hash != expected {
                 let _ = fs::remove_file(&staging_file);
-                return Err(format!("Cross-volume cryptographic verification failed: expected {}, actual {}", expected, dest_hash));
+                return Err(format!(
+                    "Cross-volume cryptographic verification failed: expected {}, actual {}",
+                    expected, dest_hash
+                ));
             }
         }
 
         if let Err(e) = fs::rename(&staging_file, destination) {
             let _ = fs::remove_file(&staging_file);
-            return Err(format!("Failed to finalize quarantine vault file rename: {}", e));
+            return Err(format!(
+                "Failed to finalize quarantine vault file rename: {}",
+                e
+            ));
         }
 
         if let Err(e) = fs::remove_file(source) {
-            return Err(format!("Quarantine copied successfully, but failed to remove original file: {}", e));
+            return Err(format!(
+                "Quarantine copied successfully, but failed to remove original file: {}",
+                e
+            ));
         }
 
         Ok(())

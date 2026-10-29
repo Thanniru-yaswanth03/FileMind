@@ -13,11 +13,20 @@ fn test_plan_generation_with_target_budget_and_explanation() {
     let root = tmp.path();
 
     // Create a mock Cargo project with target directory
-    File::create(root.join("Cargo.toml")).unwrap().write_all(b"[package]\nname = \"demo\"\n").unwrap();
-    File::create(root.join("Cargo.lock")).unwrap().write_all(b"# lock\n").unwrap();
+    File::create(root.join("Cargo.toml"))
+        .unwrap()
+        .write_all(b"[package]\nname = \"demo\"\n")
+        .unwrap();
+    File::create(root.join("Cargo.lock"))
+        .unwrap()
+        .write_all(b"# lock\n")
+        .unwrap();
     let target_dir = root.join("target");
     fs::create_dir_all(&target_dir).unwrap();
-    File::create(target_dir.join("demo.exe")).unwrap().write_all(&vec![0u8; 100_000]).unwrap(); // 100 KB
+    File::create(target_dir.join("demo.exe"))
+        .unwrap()
+        .write_all(&vec![0u8; 100_000])
+        .unwrap(); // 100 KB
 
     let req = CreatePlanRequest {
         goal: "clean_folder".to_string(),
@@ -43,7 +52,10 @@ fn test_dry_run_does_not_modify_filesystem() {
     let conn = Database::open_in_memory().unwrap();
     let tmp = tempdir().unwrap();
     let file_path = tmp.path().join("dry_run_sample.txt");
-    File::create(&file_path).unwrap().write_all(b"sample content for dry run").unwrap();
+    File::create(&file_path)
+        .unwrap()
+        .write_all(b"sample content for dry run")
+        .unwrap();
 
     let initial_meta = fs::metadata(&file_path).unwrap();
 
@@ -68,7 +80,10 @@ fn test_dry_run_does_not_modify_filesystem() {
     assert!(file_path.exists());
     let current_meta = fs::metadata(&file_path).unwrap();
     assert_eq!(initial_meta.len(), current_meta.len());
-    assert_eq!(initial_meta.modified().unwrap(), current_meta.modified().unwrap());
+    assert_eq!(
+        initial_meta.modified().unwrap(),
+        current_meta.modified().unwrap()
+    );
 }
 
 #[test]
@@ -79,7 +94,10 @@ fn test_quarantine_moves_target_and_preserves_metadata() {
 
     let manager = QuarantineManager::new(Some(tmp_vault.path().to_path_buf()));
     let file_path = tmp_src.path().join("candidate_log.log");
-    File::create(&file_path).unwrap().write_all(b"temporary server log line 1\nline 2").unwrap();
+    File::create(&file_path)
+        .unwrap()
+        .write_all(b"temporary server log line 1\nline 2")
+        .unwrap();
 
     // Quarantine the target
     let record = manager
@@ -97,7 +115,10 @@ fn test_quarantine_moves_target_and_preserves_metadata() {
     assert!(record.size_bytes > 0);
 
     // Verify record query from DB
-    let queried = manager.get_record(&record.quarantine_id, &conn).unwrap().unwrap();
+    let queried = manager
+        .get_record(&record.quarantine_id, &conn)
+        .unwrap()
+        .unwrap();
     assert_eq!(queried.quarantine_id, record.quarantine_id);
     assert_eq!(queried.original_path, record.original_path);
 }
@@ -125,7 +146,10 @@ fn test_restore_preserves_data_and_rejects_overwrite_conflict() {
     let manager = QuarantineManager::new(Some(tmp_vault.path().to_path_buf()));
     let file_path = tmp_src.path().join("restorable_data.txt");
     let original_bytes = b"important user text content";
-    File::create(&file_path).unwrap().write_all(original_bytes).unwrap();
+    File::create(&file_path)
+        .unwrap()
+        .write_all(original_bytes)
+        .unwrap();
 
     // 1. Quarantine
     let record = manager
@@ -142,7 +166,10 @@ fn test_restore_preserves_data_and_rejects_overwrite_conflict() {
     // 3. Now test conflict detection: Attempt to restore again while file exists
     // Move a dummy file back to vault to simulate second restore attempt
     let dummy_vault_file = Path::new(&record.quarantine_path);
-    File::create(&dummy_vault_file).unwrap().write_all(b"new data").unwrap();
+    File::create(&dummy_vault_file)
+        .unwrap()
+        .write_all(b"new data")
+        .unwrap();
 
     let conflict_res = manager.restore_target(&record.quarantine_id, None, &conn);
     assert!(!conflict_res.success);
@@ -160,9 +187,14 @@ fn test_purge_quarantine_permanently_removes_vault_file() {
 
     let manager = QuarantineManager::new(Some(tmp_vault.path().to_path_buf()));
     let file_path = tmp_src.path().join("purge_me.tmp");
-    File::create(&file_path).unwrap().write_all(b"temporary").unwrap();
+    File::create(&file_path)
+        .unwrap()
+        .write_all(b"temporary")
+        .unwrap();
 
-    let record = manager.quarantine_target(&file_path, "To be purged", &conn).unwrap();
+    let record = manager
+        .quarantine_target(&file_path, "To be purged", &conn)
+        .unwrap();
     let vault_file = Path::new(&record.quarantine_path);
     assert!(vault_file.exists());
 
@@ -171,7 +203,10 @@ fn test_purge_quarantine_permanently_removes_vault_file() {
     assert!(freed_bytes > 0);
     assert!(!vault_file.exists());
 
-    let updated = manager.get_record(&record.quarantine_id, &conn).unwrap().unwrap();
+    let updated = manager
+        .get_record(&record.quarantine_id, &conn)
+        .unwrap()
+        .unwrap();
     assert_eq!(updated.status, "purged");
 }
 
@@ -184,11 +219,20 @@ fn test_cleanup_executor_transactional_execution() {
 
     // Create Cargo fixture
     let root = tmp_src.path();
-    File::create(root.join("Cargo.toml")).unwrap().write_all(b"[package]\nname = \"demo\"\n").unwrap();
-    File::create(root.join("Cargo.lock")).unwrap().write_all(b"# lock\n").unwrap();
+    File::create(root.join("Cargo.toml"))
+        .unwrap()
+        .write_all(b"[package]\nname = \"demo\"\n")
+        .unwrap();
+    File::create(root.join("Cargo.lock"))
+        .unwrap()
+        .write_all(b"# lock\n")
+        .unwrap();
     let target_dir = root.join("target");
     fs::create_dir_all(&target_dir).unwrap();
-    File::create(target_dir.join("build_output.dat")).unwrap().write_all(&vec![1u8; 5000]).unwrap();
+    File::create(target_dir.join("build_output.dat"))
+        .unwrap()
+        .write_all(&vec![1u8; 5000])
+        .unwrap();
 
     let req = CreatePlanRequest {
         goal: "clean_developer_caches".to_string(),

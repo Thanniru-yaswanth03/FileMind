@@ -1,6 +1,6 @@
-use std::path::Path;
 use crate::adapter::metadata::{inspect_file, system_time_to_epoch_ms};
 use crate::adapter::path::to_long_path;
+use std::path::Path;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct HandleIdentitySnapshot {
@@ -36,23 +36,36 @@ impl std::fmt::Display for ToctouError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             ToctouError::TargetDisappeared(path) => {
-                write!(f, "Target disappeared between evaluation and execution: '{}'", path)
+                write!(
+                    f,
+                    "Target disappeared between evaluation and execution: '{}'",
+                    path
+                )
             }
-            ToctouError::IdentityChanged { expected_id, actual_id } => {
+            ToctouError::IdentityChanged {
+                expected_id,
+                actual_id,
+            } => {
                 write!(
                     f,
                     "TOCTOU violation: File identity / NTFS file ID changed! Expected {:?}, got {:?}",
                     expected_id, actual_id
                 )
             }
-            ToctouError::TargetModified { expected_mtime, actual_mtime } => {
+            ToctouError::TargetModified {
+                expected_mtime,
+                actual_mtime,
+            } => {
                 write!(
                     f,
                     "TOCTOU violation: Target was modified after evaluation! Expected mtime {}, got {}",
                     expected_mtime, actual_mtime
                 )
             }
-            ToctouError::SizeChanged { expected_size, actual_size } => {
+            ToctouError::SizeChanged {
+                expected_size,
+                actual_size,
+            } => {
                 write!(
                     f,
                     "TOCTOU violation: Target size changed! Expected {} bytes, got {} bytes",
@@ -60,10 +73,17 @@ impl std::fmt::Display for ToctouError {
                 )
             }
             ToctouError::ReparsePointSwapped => {
-                write!(f, "TOCTOU violation: Reparse point / junction swap detected!")
+                write!(
+                    f,
+                    "TOCTOU violation: Reparse point / junction swap detected!"
+                )
             }
             ToctouError::AccessDenied(msg) => {
-                write!(f, "Access denied during pre-execution handle validation: {}", msg)
+                write!(
+                    f,
+                    "Access denied during pre-execution handle validation: {}",
+                    msg
+                )
             }
         }
     }
@@ -97,10 +117,18 @@ pub fn revalidate_handle(snapshot: &HandleIdentitySnapshot) -> Result<(), Toctou
     // Standard symlink_metadata check to verify existence without traversing links
     let std_meta = match std::fs::symlink_metadata(&long_path) {
         Ok(m) => m,
-        Err(e) => return Err(ToctouError::TargetDisappeared(format!("{}: {}", snapshot.canonical_path, e))),
+        Err(e) => {
+            return Err(ToctouError::TargetDisappeared(format!(
+                "{}: {}",
+                snapshot.canonical_path, e
+            )))
+        }
     };
 
-    let cur_mtime = std_meta.modified().map(system_time_to_epoch_ms).unwrap_or(0);
+    let cur_mtime = std_meta
+        .modified()
+        .map(system_time_to_epoch_ms)
+        .unwrap_or(0);
     let cur_size = std_meta.len();
 
     // Inspect live handle
@@ -127,7 +155,9 @@ pub fn revalidate_handle(snapshot: &HandleIdentitySnapshot) -> Result<(), Toctou
     // 3. For regular files, check for modifications or size mutations
     if !snapshot.is_directory {
         // Tolerating up to 500ms filesystem clock jitter
-        if cur_mtime > snapshot.mtime_epoch_ms + 500 || (snapshot.mtime_epoch_ms > 500 && cur_mtime < snapshot.mtime_epoch_ms - 500) {
+        if cur_mtime > snapshot.mtime_epoch_ms + 500
+            || (snapshot.mtime_epoch_ms > 500 && cur_mtime < snapshot.mtime_epoch_ms - 500)
+        {
             return Err(ToctouError::TargetModified {
                 expected_mtime: snapshot.mtime_epoch_ms,
                 actual_mtime: cur_mtime,
@@ -144,4 +174,3 @@ pub fn revalidate_handle(snapshot: &HandleIdentitySnapshot) -> Result<(), Toctou
 
     Ok(())
 }
-

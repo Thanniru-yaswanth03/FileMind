@@ -136,9 +136,28 @@ pub fn is_dos_device_name(path: &Path) -> bool {
 
     matches!(
         upper.as_str(),
-        "CON" | "PRN" | "AUX" | "NUL"
-            | "COM1" | "COM2" | "COM3" | "COM4" | "COM5" | "COM6" | "COM7" | "COM8" | "COM9"
-            | "LPT1" | "LPT2" | "LPT3" | "LPT4" | "LPT5" | "LPT6" | "LPT7" | "LPT8" | "LPT9"
+        "CON"
+            | "PRN"
+            | "AUX"
+            | "NUL"
+            | "COM1"
+            | "COM2"
+            | "COM3"
+            | "COM4"
+            | "COM5"
+            | "COM6"
+            | "COM7"
+            | "COM8"
+            | "COM9"
+            | "LPT1"
+            | "LPT2"
+            | "LPT3"
+            | "LPT4"
+            | "LPT5"
+            | "LPT6"
+            | "LPT7"
+            | "LPT8"
+            | "LPT9"
     )
 }
 
@@ -167,12 +186,24 @@ mod tests {
 
     #[test]
     fn test_normalize_path() {
-        assert_eq!(normalize_path(Path::new("C:/Windows/System32")), r"C:\Windows\System32");
+        assert_eq!(
+            normalize_path(Path::new("C:/Windows/System32")),
+            r"C:\Windows\System32"
+        );
         assert_eq!(normalize_path(Path::new("C:/")), r"C:\");
         assert_eq!(normalize_path(Path::new("C:")), r"C:\");
-        assert_eq!(normalize_path(Path::new(r"\\?\C:\Users\test\")), r"C:\Users\test");
-        assert_eq!(normalize_path(Path::new(r"\\?\UNC\server\share\")), r"\\server\share");
-        assert_eq!(normalize_path(Path::new("C:/Windows /System32")), r"C:\Windows\System32");
+        assert_eq!(
+            normalize_path(Path::new(r"\\?\C:\Users\test\")),
+            r"C:\Users\test"
+        );
+        assert_eq!(
+            normalize_path(Path::new(r"\\?\UNC\server\share\")),
+            r"\\server\share"
+        );
+        assert_eq!(
+            normalize_path(Path::new("C:/Windows /System32")),
+            r"C:\Windows\System32"
+        );
         assert_eq!(normalize_path(Path::new("C:/Windows.")), r"C:\Windows");
     }
 
@@ -191,7 +222,10 @@ mod tests {
     fn test_is_descendant_of() {
         let root = Path::new(r"C:\Projects");
         assert!(is_descendant_of(Path::new(r"C:\Projects\file.rs"), root));
-        assert!(is_descendant_of(Path::new(r"C:\Projects\subdir\file.rs"), root));
+        assert!(is_descendant_of(
+            Path::new(r"C:\Projects\subdir\file.rs"),
+            root
+        ));
         assert!(!is_descendant_of(Path::new(r"C:\Windows\System32"), root));
         assert!(!is_descendant_of(Path::new(r"C:\ProjectsOther"), root));
     }

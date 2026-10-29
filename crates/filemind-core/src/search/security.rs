@@ -6,8 +6,21 @@ pub struct SecretFilter;
 impl SecretFilter {
     /// Sensitive file extensions that should never be indexed into full-text search.
     pub const SENSITIVE_EXTENSIONS: &'static [&'static str] = &[
-        "pem", "key", "pfx", "p12", "crt", "cer", "kdbx", "token", "id_rsa", "id_ed25519", "jks",
-        "keystore", "pkcs12", "der", "p8",
+        "pem",
+        "key",
+        "pfx",
+        "p12",
+        "crt",
+        "cer",
+        "kdbx",
+        "token",
+        "id_rsa",
+        "id_ed25519",
+        "jks",
+        "keystore",
+        "pkcs12",
+        "der",
+        "p8",
     ];
 
     /// Sensitive filenames or substring patterns that indicate secrets or credentials.
@@ -77,4 +90,3 @@ impl SecretFilter {
         false
     }
 }
-

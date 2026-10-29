@@ -23,7 +23,11 @@ impl Migrator {
 
             tx.execute(
                 "INSERT INTO schema_version (version, applied_at, description) VALUES (?1, ?2, ?3)",
-                rusqlite::params![1, now, "V1: Base storage scanner, sessions, directories, files, and errors schema"],
+                rusqlite::params![
+                    1,
+                    now,
+                    "V1: Base storage scanner, sessions, directories, files, and errors schema"
+                ],
             )?;
 
             tx.pragma_update(None, "user_version", 1)?;
@@ -43,7 +47,11 @@ impl Migrator {
 
             tx.execute(
                 "INSERT INTO schema_version (version, applied_at, description) VALUES (?1, ?2, ?3)",
-                rusqlite::params![2, now, "V2: FTS5 full-text document search and duplicate detection indexing"],
+                rusqlite::params![
+                    2,
+                    now,
+                    "V2: FTS5 full-text document search and duplicate detection indexing"
+                ],
             )?;
 
             tx.pragma_update(None, "user_version", 2)?;
@@ -63,7 +71,11 @@ impl Migrator {
 
             tx.execute(
                 "INSERT INTO schema_version (version, applied_at, description) VALUES (?1, ?2, ?3)",
-                rusqlite::params![3, now, "V3: Smart Delete Guardian and Dependency Intelligence safety audit log"],
+                rusqlite::params![
+                    3,
+                    now,
+                    "V3: Smart Delete Guardian and Dependency Intelligence safety audit log"
+                ],
             )?;
 
             tx.pragma_update(None, "user_version", 3)?;
@@ -130,10 +142,16 @@ mod tests {
         assert_eq!(Migrator::get_version(&conn).unwrap(), 0);
 
         Migrator::migrate(&mut conn).unwrap();
-        assert_eq!(Migrator::get_version(&conn).unwrap(), CURRENT_SCHEMA_VERSION);
+        assert_eq!(
+            Migrator::get_version(&conn).unwrap(),
+            CURRENT_SCHEMA_VERSION
+        );
 
         // Re-running migration should be an idempotent no-op
         Migrator::migrate(&mut conn).unwrap();
-        assert_eq!(Migrator::get_version(&conn).unwrap(), CURRENT_SCHEMA_VERSION);
+        assert_eq!(
+            Migrator::get_version(&conn).unwrap(),
+            CURRENT_SCHEMA_VERSION
+        );
     }
 }

@@ -25,7 +25,11 @@ pub struct ScanFilter {
 }
 
 impl ScanFilter {
-    pub fn new(root_path: PathBuf, reparse_policy: ReparsePointPolicy, custom_exclusions: Vec<String>) -> Self {
+    pub fn new(
+        root_path: PathBuf,
+        reparse_policy: ReparsePointPolicy,
+        custom_exclusions: Vec<String>,
+    ) -> Self {
         Self {
             root_path,
             reparse_policy,
@@ -85,4 +89,3 @@ impl ScanFilter {
         self.visited_directories.insert((volume_serial, file_id))
     }
 }
-

@@ -1,8 +1,8 @@
 use notify::{Config, Event, RecommendedWatcher, RecursiveMode, Watcher};
 use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc::{channel, Receiver};
 use std::sync::Arc;
-use std::sync::atomic::{AtomicBool, Ordering};
 
 pub struct FileSystemWatcher {
     root_path: PathBuf,
@@ -51,4 +51,3 @@ impl FileSystemWatcher {
         self.is_running.store(false, Ordering::Relaxed);
     }
 }
-

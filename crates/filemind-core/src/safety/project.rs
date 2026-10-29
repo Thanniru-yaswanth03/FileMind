@@ -1,5 +1,5 @@
+use crate::models::{EvidenceSource, SafetyClassification, TypedEvidenceItem};
 use std::path::{Path, PathBuf};
-use crate::models::{SafetyClassification, EvidenceSource, TypedEvidenceItem};
 
 #[derive(Debug, Clone)]
 pub struct ProjectEvidence {
@@ -22,10 +22,18 @@ pub fn is_secret_file(filename: &str) -> bool {
     if lower.contains("id_rsa") || lower.contains("id_ed25519") || lower.contains("id_ecdsa") {
         return true;
     }
-    if lower.ends_with(".pem") || lower.ends_with(".key") || lower.ends_with(".pkcs12") || lower.ends_with(".pfx") || lower.ends_with(".p12") || lower.ends_with(".kdbx") {
+    if lower.ends_with(".pem")
+        || lower.ends_with(".key")
+        || lower.ends_with(".pkcs12")
+        || lower.ends_with(".pfx")
+        || lower.ends_with(".p12")
+        || lower.ends_with(".kdbx")
+    {
         return true;
     }
-    if lower == "credentials.json" || lower.starts_with("service-account") && lower.ends_with(".json") {
+    if lower == "credentials.json"
+        || lower.starts_with("service-account") && lower.ends_with(".json")
+    {
         return true;
     }
     false
@@ -36,8 +44,8 @@ pub fn is_source_code_file(path: &Path) -> bool {
     if let Some(ext) = path.extension().and_then(|e| e.to_str()) {
         let ext_lower = ext.to_lowercase();
         match ext_lower.as_str() {
-            "rs" | "ts" | "tsx" | "js" | "jsx" | "py" | "go" | "c" | "cpp" | "h" | "hpp"
-            | "cs" | "java" | "kt" | "swift" | "sql" | "sh" | "ps1" | "toml" | "yaml" | "yml" => true,
+            "rs" | "ts" | "tsx" | "js" | "jsx" | "py" | "go" | "c" | "cpp" | "h" | "hpp" | "cs"
+            | "java" | "kt" | "swift" | "sql" | "sh" | "ps1" | "toml" | "yaml" | "yml" => true,
             _ => false,
         }
     } else {
@@ -74,7 +82,11 @@ pub fn inspect_package_manager_ecosystem(candidate_dir: &Path) -> (Option<String
     let cargo_toml = parent.join("Cargo.toml");
     let cargo_lock = parent.join("Cargo.lock");
     if cargo_toml.exists() {
-        let lock = if cargo_lock.exists() { Some("Cargo.lock".to_string()) } else { None };
+        let lock = if cargo_lock.exists() {
+            Some("Cargo.lock".to_string())
+        } else {
+            None
+        };
         return (Some("Cargo.toml".to_string()), lock);
     }
 
@@ -146,10 +158,14 @@ pub fn evaluate_project_dependencies(path: &Path) -> ProjectEvidence {
     if is_secret_file(filename) {
         evidence_items.push(TypedEvidenceItem {
             source: EvidenceSource::DeveloperManifest,
-            claim: format!("Filename '{}' matches known credential, private key, or secret pattern", filename),
+            claim: format!(
+                "Filename '{}' matches known credential, private key, or secret pattern",
+                filename
+            ),
             supports_safety: false,
             verification_status: "Verified".to_string(),
-            details: "Secrets and credentials must never be automatically or carelessly deleted".to_string(),
+            details: "Secrets and credentials must never be automatically or carelessly deleted"
+                .to_string(),
         });
 
         return ProjectEvidence {
@@ -165,13 +181,18 @@ pub fn evaluate_project_dependencies(path: &Path) -> ProjectEvidence {
     }
 
     // 2. Git Directory Inspection
-    if filename == ".git" || path.to_string_lossy().contains("\\.git\\") || path.to_string_lossy().contains("/.git/") {
+    if filename == ".git"
+        || path.to_string_lossy().contains("\\.git\\")
+        || path.to_string_lossy().contains("/.git/")
+    {
         evidence_items.push(TypedEvidenceItem {
             source: EvidenceSource::GitRepository,
             claim: "Target is within the internal Git database (.git)".to_string(),
             supports_safety: false,
             verification_status: "Verified".to_string(),
-            details: "Direct deletion of .git database destroys version control history and branches".to_string(),
+            details:
+                "Direct deletion of .git database destroys version control history and branches"
+                    .to_string(),
         });
 
         return ProjectEvidence {
@@ -195,7 +216,10 @@ pub fn evaluate_project_dependencies(path: &Path) -> ProjectEvidence {
             claim: "Enclosing Git repository detected".to_string(),
             supports_safety: true,
             verification_status: "Verified".to_string(),
-            details: format!("Repository root found at '{:?}'", git_repo.as_ref().unwrap().parent().unwrap_or(Path::new(""))),
+            details: format!(
+                "Repository root found at '{:?}'",
+                git_repo.as_ref().unwrap().parent().unwrap_or(Path::new(""))
+            ),
         });
     }
 
@@ -206,7 +230,9 @@ pub fn evaluate_project_dependencies(path: &Path) -> ProjectEvidence {
             claim: "Target is primary source code or project configuration".to_string(),
             supports_safety: false,
             verification_status: "Verified".to_string(),
-            details: "Source code cannot be regenerated from build manifests; requires manual review".to_string(),
+            details:
+                "Source code cannot be regenerated from build manifests; requires manual review"
+                    .to_string(),
         });
 
         return ProjectEvidence {
@@ -216,7 +242,8 @@ pub fn evaluate_project_dependencies(path: &Path) -> ProjectEvidence {
             lockfile_found: None,
             git_repo_detected: git_detected,
             has_secrets: false,
-            explanation: "Source code or configuration file requires explicit user review".to_string(),
+            explanation: "Source code or configuration file requires explicit user review"
+                .to_string(),
             evidence_items,
         };
     }
@@ -252,7 +279,9 @@ pub fn evaluate_project_dependencies(path: &Path) -> ProjectEvidence {
                 claim: "No parent package manifest discovered in enclosing directory".to_string(),
                 supports_safety: false,
                 verification_status: "Verified".to_string(),
-                details: "Cannot verify project origin; could be user files named 'build' or 'target'".to_string(),
+                details:
+                    "Cannot verify project origin; could be user files named 'build' or 'target'"
+                        .to_string(),
             });
         }
 
@@ -262,7 +291,8 @@ pub fn evaluate_project_dependencies(path: &Path) -> ProjectEvidence {
                 claim: format!("Deterministic lockfile '{}' confirmed", l),
                 supports_safety: true,
                 verification_status: "Verified".to_string(),
-                details: "Ensures that rebuilding the project produces reproducible dependencies".to_string(),
+                details: "Ensures that rebuilding the project produces reproducible dependencies"
+                    .to_string(),
             });
         } else if manifest.is_some() {
             evidence_items.push(TypedEvidenceItem {
@@ -270,7 +300,8 @@ pub fn evaluate_project_dependencies(path: &Path) -> ProjectEvidence {
                 claim: "Lockfile missing: project dependencies are not strictly pinned".to_string(),
                 supports_safety: false,
                 verification_status: "Verified".to_string(),
-                details: "Re-installing dependencies might produce non-deterministic versions".to_string(),
+                details: "Re-installing dependencies might produce non-deterministic versions"
+                    .to_string(),
             });
         }
 
@@ -279,10 +310,13 @@ pub fn evaluate_project_dependencies(path: &Path) -> ProjectEvidence {
         if env_file.exists() {
             evidence_items.push(TypedEvidenceItem {
                 source: EvidenceSource::DeveloperManifest,
-                claim: "Misplaced secret '.env' file detected inside candidate build directory".to_string(),
+                claim: "Misplaced secret '.env' file detected inside candidate build directory"
+                    .to_string(),
                 supports_safety: false,
                 verification_status: "Verified".to_string(),
-                details: "Contains environment secret file; cannot be safely cleaned without backup".to_string(),
+                details:
+                    "Contains environment secret file; cannot be safely cleaned without backup"
+                        .to_string(),
             });
 
             return ProjectEvidence {
@@ -351,4 +385,3 @@ pub fn evaluate_project_dependencies(path: &Path) -> ProjectEvidence {
         evidence_items,
     }
 }
-

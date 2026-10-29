@@ -67,7 +67,11 @@ impl ProgressTracker {
         let bytes = self.bytes_count.load(Ordering::Relaxed);
         let dirs = self.dirs_count.load(Ordering::Relaxed);
         let errors = self.errors_count.load(Ordering::Relaxed);
-        let path = self.current_path.lock().map(|p| p.clone()).unwrap_or_default();
+        let path = self
+            .current_path
+            .lock()
+            .map(|p| p.clone())
+            .unwrap_or_default();
 
         // Percent calculation: If active, simulate logarithmic progress curve until completion
         let percent = if !is_scanning {
@@ -90,4 +94,3 @@ impl ProgressTracker {
         }
     }
 }
-

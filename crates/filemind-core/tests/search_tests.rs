@@ -55,8 +55,16 @@ fn test_fts5_document_content_indexing_and_search() {
     let doc_a = root.join("architecture.md");
     let doc_b = root.join("notes.txt");
 
-    fs::write(&doc_a, b"# Storage Engine\nHigh performance deterministic storage intelligence").unwrap();
-    fs::write(&doc_b, b"Team sync: discuss memory allocation and cache pruning").unwrap();
+    fs::write(
+        &doc_a,
+        b"# Storage Engine\nHigh performance deterministic storage intelligence",
+    )
+    .unwrap();
+    fs::write(
+        &doc_b,
+        b"Team sync: discuss memory allocation and cache pruning",
+    )
+    .unwrap();
 
     let cancel = Arc::new(AtomicBool::new(false));
     let scan_res = execute_scan(root, vec![], cancel, None, None);
@@ -78,7 +86,9 @@ fn test_fts5_document_content_indexing_and_search() {
 
     assert_eq!(search_res.total_matches, 1);
     assert_eq!(search_res.results[0].filename, "architecture.md");
-    assert!(search_res.results[0].snippet.contains("<mark>deterministic</mark>"));
+    assert!(search_res.results[0]
+        .snippet
+        .contains("<mark>deterministic</mark>"));
     assert_eq!(search_res.results[0].is_stale, false);
 }
 
@@ -93,7 +103,11 @@ fn test_sensitive_credentials_and_keys_excluded_from_indexing() {
     let normal_file = root.join("readme.txt");
 
     fs::write(&env_file, b"DATABASE_PASSWORD=super_secret_password_123").unwrap();
-    fs::write(&key_file, b"-----BEGIN PRIVATE KEY-----\nMIIEvgIBADANBgkq...").unwrap();
+    fs::write(
+        &key_file,
+        b"-----BEGIN PRIVATE KEY-----\nMIIEvgIBADANBgkq...",
+    )
+    .unwrap();
     fs::write(&creds_file, b"{\"api_key\": \"AIzaSyD-secret-token-here\"}").unwrap();
     fs::write(&normal_file, b"Public documentation text").unwrap();
 
@@ -149,7 +163,11 @@ fn test_stale_document_index_detection() {
 
     // Now mutate the file on disk after indexing
     std::thread::sleep(std::time::Duration::from_millis(20));
-    fs::write(&doc, b"Updated content with different length and modified timestamp").unwrap();
+    fs::write(
+        &doc,
+        b"Updated content with different length and modified timestamp",
+    )
+    .unwrap();
 
     // Query for "specification"
     let q = ContentSearchQuery {
@@ -199,4 +217,3 @@ fn test_clear_content_index_preserves_file_metadata() {
     .unwrap();
     assert_eq!(files_res.total_count, 2);
 }
-

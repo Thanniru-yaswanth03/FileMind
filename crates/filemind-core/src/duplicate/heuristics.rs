@@ -116,7 +116,8 @@ impl LocationEvaluator {
                 best_idx = idx;
 
                 primary_reason = if is_sys {
-                    "Preserved in protected system directory to maintain application integrity.".to_string()
+                    "Preserved in protected system directory to maintain application integrity."
+                        .to_string()
                 } else if is_proj {
                     "Located in active development project repository.".to_string()
                 } else if is_pref && is_sec {
@@ -132,4 +133,3 @@ impl LocationEvaluator {
         (best_idx, primary_reason)
     }
 }
-

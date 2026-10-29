@@ -85,12 +85,22 @@ fn test_dos_device_names_detected() {
 
 #[test]
 fn test_alternate_data_streams_detected() {
-    assert!(is_has_alternate_data_stream(Path::new(r"C:\folder\file.txt:evil.exe")));
-    assert!(is_has_alternate_data_stream(Path::new(r"C:\folder\file.txt:$DATA")));
-    assert!(is_has_alternate_data_stream(Path::new(r"C:\folder\file.txt:stream")));
+    assert!(is_has_alternate_data_stream(Path::new(
+        r"C:\folder\file.txt:evil.exe"
+    )));
+    assert!(is_has_alternate_data_stream(Path::new(
+        r"C:\folder\file.txt:$DATA"
+    )));
+    assert!(is_has_alternate_data_stream(Path::new(
+        r"C:\folder\file.txt:stream"
+    )));
 
-    assert!(!is_has_alternate_data_stream(Path::new(r"C:\folder\file.txt")));
-    assert!(!is_has_alternate_data_stream(Path::new(r"D:\data\archive.zip")));
+    assert!(!is_has_alternate_data_stream(Path::new(
+        r"C:\folder\file.txt"
+    )));
+    assert!(!is_has_alternate_data_stream(Path::new(
+        r"D:\data\archive.zip"
+    )));
 }
 
 #[test]
@@ -100,13 +110,18 @@ fn test_toctou_mutation_after_planning_strictly_aborts_execution() {
     fs::write(&target_file, b"Original approved content 12345").unwrap();
 
     // 1. Capture snapshot at planning time
-    let planned_snapshot = capture_identity_snapshot(&target_file).expect("Failed to snapshot original file");
+    let planned_snapshot =
+        capture_identity_snapshot(&target_file).expect("Failed to snapshot original file");
     assert_eq!(planned_snapshot.logical_size_bytes, 31);
 
     // 2. Simulate adversarial mutation between planning and execution (e.g. file content replaced)
     // Sleep briefly to ensure filesystem timestamp ticks
     std::thread::sleep(std::time::Duration::from_millis(50));
-    fs::write(&target_file, b"Adversarial malicious content replaced after user approval! Extra payload bytes here!").unwrap();
+    fs::write(
+        &target_file,
+        b"Adversarial malicious content replaced after user approval! Extra payload bytes here!",
+    )
+    .unwrap();
 
     // 3. Revalidation against planned snapshot MUST detect mutation and abort
     let reval_result = revalidate_handle(&planned_snapshot);
@@ -115,7 +130,10 @@ fn test_toctou_mutation_after_planning_strictly_aborts_execution() {
         "Revalidation MUST fail when file content/size changes after planning"
     );
     match reval_result.unwrap_err() {
-        ToctouError::SizeChanged { expected_size, actual_size } => {
+        ToctouError::SizeChanged {
+            expected_size,
+            actual_size,
+        } => {
             assert_eq!(expected_size, 31);
             assert!(actual_size > 31);
         }

@@ -52,7 +52,10 @@ fn test_identical_files_with_different_names() {
     // Verify each file has its exact path
     assert!(grp.files.iter().any(|f| f.filename == "original.dat"));
     assert!(grp.files.iter().any(|f| f.filename == "copy_renamed.bin"));
-    assert!(grp.files.iter().any(|f| f.filename == "backup_different_name.dat"));
+    assert!(grp
+        .files
+        .iter()
+        .any(|f| f.filename == "backup_different_name.dat"));
 }
 
 #[test]
@@ -66,8 +69,16 @@ fn test_same_filename_different_contents() {
     fs::create_dir_all(&dir_b).unwrap();
 
     // Same filename "config.json" but different content and size
-    fs::write(dir_a.join("config.json"), b"{\"project\": \"alpha\", \"version\": 1}").unwrap();
-    fs::write(dir_b.join("config.json"), b"{\"project\": \"beta\", \"features\": [1, 2, 3]}").unwrap();
+    fs::write(
+        dir_a.join("config.json"),
+        b"{\"project\": \"alpha\", \"version\": 1}",
+    )
+    .unwrap();
+    fs::write(
+        dir_b.join("config.json"),
+        b"{\"project\": \"beta\", \"features\": [1, 2, 3]}",
+    )
+    .unwrap();
 
     let cancel = Arc::new(AtomicBool::new(false));
     let scan_res = execute_scan(root, vec![], cancel, None, None);
@@ -231,4 +242,3 @@ fn test_duplicates_strictly_non_destructive() {
     assert_eq!(fs::read(&file_1).unwrap(), data.as_slice());
     assert_eq!(fs::read(&file_2).unwrap(), data.as_slice());
 }
-

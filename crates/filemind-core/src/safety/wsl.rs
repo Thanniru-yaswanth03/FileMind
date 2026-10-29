@@ -1,6 +1,6 @@
-use std::path::Path;
 use crate::adapter::path::{normalize_path, strip_verbatim_prefix};
-use crate::models::{SafetyClassification, EvidenceSource, TypedEvidenceItem};
+use crate::models::{EvidenceSource, SafetyClassification, TypedEvidenceItem};
+use std::path::Path;
 
 #[derive(Debug, Clone)]
 pub struct WslRuleMatch {
@@ -19,7 +19,11 @@ pub fn evaluate_wsl_protection(path: &Path) -> Option<WslRuleMatch> {
     let norm_lower = normalized.to_lowercase().replace('/', "\\");
 
     // UNC WSL share paths (\\wsl$\ or \\wsl.localhost\)
-    if norm_lower.starts_with("\\\\wsl$\\") || norm_lower.starts_with("\\\\wsl.localhost\\") || norm_lower == "\\\\wsl$" || norm_lower == "\\\\wsl.localhost" {
+    if norm_lower.starts_with("\\\\wsl$\\")
+        || norm_lower.starts_with("\\\\wsl.localhost\\")
+        || norm_lower == "\\\\wsl$"
+        || norm_lower == "\\\\wsl.localhost"
+    {
         return Some(WslRuleMatch {
             rule_id: "WSL-UNC-MOUNT-BLOCK",
             description: "Direct Windows Subsystem for Linux network mount",
@@ -36,10 +40,23 @@ pub fn evaluate_wsl_protection(path: &Path) -> Option<WslRuleMatch> {
     }
 
     // Virtual Hard Disk (VHDX) detection
-    let is_vhdx = path.extension().and_then(|e| e.to_str()).map(|e| e.eq_ignore_ascii_case("vhdx")).unwrap_or(false);
-    let filename = path.file_name().and_then(|n| n.to_str()).unwrap_or("").to_lowercase();
+    let is_vhdx = path
+        .extension()
+        .and_then(|e| e.to_str())
+        .map(|e| e.eq_ignore_ascii_case("vhdx"))
+        .unwrap_or(false);
+    let filename = path
+        .file_name()
+        .and_then(|n| n.to_str())
+        .unwrap_or("")
+        .to_lowercase();
 
-    if filename == "ext4.vhdx" || (is_vhdx && (norm_lower.contains("wsl") || norm_lower.contains("canonical") || norm_lower.contains("docker"))) {
+    if filename == "ext4.vhdx"
+        || (is_vhdx
+            && (norm_lower.contains("wsl")
+                || norm_lower.contains("canonical")
+                || norm_lower.contains("docker")))
+    {
         return Some(WslRuleMatch {
             rule_id: "WSL-VHDX-DISK-IMAGE",
             description: "WSL distribution ext4 virtual hard disk image",
@@ -103,4 +120,3 @@ pub fn evaluate_wsl_protection(path: &Path) -> Option<WslRuleMatch> {
 
     None
 }
-

@@ -54,8 +54,15 @@ impl CopilotToolRunner {
         let prefix = args.get("prefix").and_then(|v| v.as_str());
         let min_size = args.get("min_size").and_then(|v| v.as_u64());
         let max_size = args.get("max_size").and_then(|v| v.as_u64());
-        let sort_by = args.get("sort_by").and_then(|v| v.as_str()).unwrap_or("size_desc");
-        let limit = args.get("limit").and_then(|v| v.as_u64()).unwrap_or(25).min(100) as usize;
+        let sort_by = args
+            .get("sort_by")
+            .and_then(|v| v.as_str())
+            .unwrap_or("size_desc");
+        let limit = args
+            .get("limit")
+            .and_then(|v| v.as_u64())
+            .unwrap_or(25)
+            .min(100) as usize;
 
         let (sort_field, sort_order) = match sort_by {
             "mtime_desc" => ("mtime", "desc"),
@@ -286,7 +293,10 @@ impl CopilotToolRunner {
 
     fn tool_find_duplicates(args: &serde_json::Value, conn: &Connection) -> CopilotToolResult {
         let max_groups = args.get("limit").and_then(|v| v.as_u64()).unwrap_or(20) as usize;
-        let verify_bytes = args.get("verify_bytes").and_then(|v| v.as_bool()).unwrap_or(false);
+        let verify_bytes = args
+            .get("verify_bytes")
+            .and_then(|v| v.as_bool())
+            .unwrap_or(false);
 
         let req = DuplicateScanRequest {
             session_id: None,
@@ -347,7 +357,10 @@ impl CopilotToolRunner {
             }
         };
 
-        let op = args.get("operation").and_then(|v| v.as_str()).unwrap_or("delete");
+        let op = args
+            .get("operation")
+            .and_then(|v| v.as_str())
+            .unwrap_or("delete");
         let path_obj = Path::new(&norm_path);
         let assessment = SafetyGuardian::evaluate_target(path_obj, op);
 
@@ -356,7 +369,10 @@ impl CopilotToolRunner {
             norm_path,
             assessment.classification,
             assessment.is_permitted,
-            assessment.block_reason.as_deref().unwrap_or("No policy restriction violated")
+            assessment
+                .block_reason
+                .as_deref()
+                .unwrap_or("No policy restriction violated")
         );
 
         CopilotToolResult {
@@ -368,10 +384,19 @@ impl CopilotToolRunner {
         }
     }
 
-    fn tool_generate_cleanup_plan(args: &serde_json::Value, conn: &Connection) -> CopilotToolResult {
-        let goal = args.get("goal").and_then(|v| v.as_str()).unwrap_or("maximize_safe");
+    fn tool_generate_cleanup_plan(
+        args: &serde_json::Value,
+        conn: &Connection,
+    ) -> CopilotToolResult {
+        let goal = args
+            .get("goal")
+            .and_then(|v| v.as_str())
+            .unwrap_or("maximize_safe");
         let target_bytes = args.get("target_bytes").and_then(|v| v.as_u64());
-        let folder_path = args.get("folder_path").and_then(|v| v.as_str()).map(|s| s.to_string());
+        let folder_path = args
+            .get("folder_path")
+            .and_then(|v| v.as_str())
+            .map(|s| s.to_string());
         let selected_paths: Option<Vec<String>> = args.get("selected_paths").and_then(|v| {
             v.as_array().map(|arr| {
                 arr.iter()
@@ -443,8 +468,15 @@ impl CopilotToolRunner {
         }
     }
 
-    fn tool_get_operation_history(args: &serde_json::Value, conn: &Connection) -> CopilotToolResult {
-        let limit = args.get("limit").and_then(|v| v.as_u64()).unwrap_or(15).min(50) as usize;
+    fn tool_get_operation_history(
+        args: &serde_json::Value,
+        conn: &Connection,
+    ) -> CopilotToolResult {
+        let limit = args
+            .get("limit")
+            .and_then(|v| v.as_u64())
+            .unwrap_or(15)
+            .min(50) as usize;
 
         let mut quarantine_items = Vec::new();
         if let Ok(mut stmt) = conn.prepare(
@@ -543,19 +575,26 @@ impl CopilotToolRunner {
             }
         };
 
-        let operation = args.get("operation").and_then(|v| v.as_str()).unwrap_or("delete");
+        let operation = args
+            .get("operation")
+            .and_then(|v| v.as_str())
+            .unwrap_or("delete");
         let path_obj = Path::new(&norm_path);
         let assessment = SafetyGuardian::evaluate_target(path_obj, operation);
 
         let is_blocked = !assessment.is_permitted;
-        let requires_confirmation = assessment.classification == SafetyClassification::ReviewRequired;
+        let requires_confirmation =
+            assessment.classification == SafetyClassification::ReviewRequired;
 
         let summary = if is_blocked {
             format!(
                 "Operation '{}' on '{}' is STRICTLY BLOCKED by safety rule: {}",
                 operation,
                 norm_path,
-                assessment.block_reason.as_deref().unwrap_or("Protected path")
+                assessment
+                    .block_reason
+                    .as_deref()
+                    .unwrap_or("Protected path")
             )
         } else if requires_confirmation {
             format!(
@@ -563,7 +602,10 @@ impl CopilotToolRunner {
                 operation, norm_path
             )
         } else {
-            format!("Operation '{}' on '{}' is permitted as low-risk.", operation, norm_path)
+            format!(
+                "Operation '{}' on '{}' is permitted as low-risk.",
+                operation, norm_path
+            )
         };
 
         CopilotToolResult {

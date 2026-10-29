@@ -83,14 +83,23 @@ impl AutomationScheduler {
                                     for event in settled {
                                         for r in &rules {
                                             if r.is_enabled {
-                                                if let AutomationTrigger::FileEvent { watch_path, event_kinds } = &r.trigger {
-                                                    if event.path.starts_with(watch_path) && event_kinds.contains(&event.kind) {
+                                                if let AutomationTrigger::FileEvent {
+                                                    watch_path,
+                                                    event_kinds,
+                                                } = &r.trigger
+                                                {
+                                                    if event.path.starts_with(watch_path)
+                                                        && event_kinds.contains(&event.kind)
+                                                    {
                                                         let _ = AutomationEngine::execute_rule(
                                                             &conn,
                                                             r,
                                                             &quarantine_clone,
                                                             None,
-                                                            Some(&format!("file_event:{}", event.kind)),
+                                                            Some(&format!(
+                                                                "file_event:{}",
+                                                                event.kind
+                                                            )),
                                                         );
                                                     }
                                                 }
@@ -117,10 +126,15 @@ impl AutomationScheduler {
                             }
 
                             let should_execute = match &rule.trigger {
-                                AutomationTrigger::Schedule { interval_minutes, .. } => {
-                                    let interval_ms = (interval_minutes.unwrap_or(60) as u64) * 60 * 1000;
+                                AutomationTrigger::Schedule {
+                                    interval_minutes, ..
+                                } => {
+                                    let interval_ms =
+                                        (interval_minutes.unwrap_or(60) as u64) * 60 * 1000;
                                     match rule.last_run_at {
-                                        Some(last) => now_epoch_ms.saturating_sub(last) >= interval_ms,
+                                        Some(last) => {
+                                            now_epoch_ms.saturating_sub(last) >= interval_ms
+                                        }
                                         None => true,
                                     }
                                 }
@@ -174,7 +188,11 @@ impl AutomationScheduler {
         if let Ok(lock) = self.watcher.lock() {
             if let Some(ref w) = *lock {
                 active_watchers_count = w.active_roots().len();
-                watched_paths = w.active_roots().iter().map(|p| p.to_string_lossy().to_string()).collect();
+                watched_paths = w
+                    .active_roots()
+                    .iter()
+                    .map(|p| p.to_string_lossy().to_string())
+                    .collect();
             }
         }
 
@@ -220,4 +238,3 @@ impl AutomationScheduler {
         (false, task_name.to_string())
     }
 }
-

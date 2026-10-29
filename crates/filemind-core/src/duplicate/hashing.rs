@@ -8,8 +8,14 @@ use crate::adapter::path::to_long_path;
 #[derive(Debug)]
 pub enum HashingError {
     Io(std::io::Error),
-    ModifiedDuringStream { initial_mtime: u64, current_mtime: u64 },
-    SizeChangedDuringStream { initial_size: u64, current_size: u64 },
+    ModifiedDuringStream {
+        initial_mtime: u64,
+        current_mtime: u64,
+    },
+    SizeChangedDuringStream {
+        initial_size: u64,
+        current_size: u64,
+    },
     NotFound,
     PermissionDenied,
 }

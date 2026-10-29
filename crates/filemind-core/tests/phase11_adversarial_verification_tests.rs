@@ -44,7 +44,10 @@ fn test_http_server_occupied_port_and_clean_restart() {
     // Attempting to start the FileMind server on the occupied port must fail
     let state = Arc::new(AppState::new(db_path.clone()));
     let res = start_server(port, state);
-    assert!(res.is_err(), "Server must fail to bind if port is already occupied");
+    assert!(
+        res.is_err(),
+        "Server must fail to bind if port is already occupied"
+    );
     let err_msg = res.err().unwrap().to_string();
     assert!(
         err_msg.contains("Failed to bind server") || err_msg.contains("address already in use"),
@@ -97,7 +100,15 @@ fn test_http_server_encoded_and_complex_traversal_attacks() {
 
     for vector in traversal_vectors {
         let url = format!("http://127.0.0.1:{}/{}", port, vector);
-        let code = curl_status(&["--path-as-is", "-s", "-o", "nul", "-w", "%{http_code}", &url]);
+        let code = curl_status(&[
+            "--path-as-is",
+            "-s",
+            "-o",
+            "nul",
+            "-w",
+            "%{http_code}",
+            &url,
+        ]);
         assert!(
             code == "403" || code == "404",
             "Traversal vector '{}' must be rejected with 403 or 404, got HTTP {}",
@@ -135,9 +146,12 @@ fn test_http_server_hostile_origins() {
     for origin in hostile_origins {
         let code = curl_status(&[
             "-s",
-            "-H", &format!("Origin: {}", origin),
-            "-o", "nul",
-            "-w", "%{http_code}",
+            "-H",
+            &format!("Origin: {}", origin),
+            "-o",
+            "nul",
+            "-w",
+            "%{http_code}",
             &url,
         ]);
         assert_eq!(
@@ -160,9 +174,12 @@ fn test_http_server_hostile_origins() {
     for origin in valid_origins {
         let code = curl_status(&[
             "-s",
-            "-H", &format!("Origin: {}", origin),
-            "-o", "nul",
-            "-w", "%{http_code}",
+            "-H",
+            &format!("Origin: {}", origin),
+            "-o",
+            "nul",
+            "-w",
+            "%{http_code}",
             &url,
         ]);
         assert_eq!(
@@ -206,10 +223,14 @@ fn test_mutating_endpoints_strictly_require_session_capability() {
         // 1. Missing token -> 401 Unauthorized
         let code_missing = curl_status(&[
             "-s",
-            "-X", method,
-            "-H", "Content-Type: application/json",
-            "-o", "nul",
-            "-w", "%{http_code}",
+            "-X",
+            method,
+            "-H",
+            "Content-Type: application/json",
+            "-o",
+            "nul",
+            "-w",
+            "%{http_code}",
             &url,
         ]);
         assert_eq!(
@@ -221,11 +242,16 @@ fn test_mutating_endpoints_strictly_require_session_capability() {
         // 2. Invalid / forged token -> 401 Unauthorized
         let code_invalid = curl_status(&[
             "-s",
-            "-X", method,
-            "-H", "Content-Type: application/json",
-            "-H", "X-FileMind-Session-Token: forged_token_99999",
-            "-o", "nul",
-            "-w", "%{http_code}",
+            "-X",
+            method,
+            "-H",
+            "Content-Type: application/json",
+            "-H",
+            "X-FileMind-Session-Token: forged_token_99999",
+            "-o",
+            "nul",
+            "-w",
+            "%{http_code}",
             &url,
         ]);
         assert_eq!(
@@ -237,11 +263,16 @@ fn test_mutating_endpoints_strictly_require_session_capability() {
         // 3. Valid token -> Not 401 (either 200, 400 for empty body, etc., but authorized)
         let code_valid = curl_status(&[
             "-s",
-            "-X", method,
-            "-H", "Content-Type: application/json",
-            "-H", &format!("X-FileMind-Session-Token: {}", valid_token),
-            "-o", "nul",
-            "-w", "%{http_code}",
+            "-X",
+            method,
+            "-H",
+            "Content-Type: application/json",
+            "-H",
+            &format!("X-FileMind-Session-Token: {}", valid_token),
+            "-o",
+            "nul",
+            "-w",
+            "%{http_code}",
             &url,
         ]);
         assert_ne!(
@@ -265,19 +296,30 @@ fn test_quarantine_rollback_on_concurrent_source_modification() {
     fs::write(&src, "Original content version 1").unwrap();
 
     // Compute expected hash of v1
-    let hash_v1 = blake3::hash(b"Original content version 1").to_hex().to_string();
+    let hash_v1 = blake3::hash(b"Original content version 1")
+        .to_hex()
+        .to_string();
 
     // Now tamper with the source file prior to move execution
     fs::write(&src, "Tampered content version 2!").unwrap();
 
     // Execute quarantine move expecting v1
     let res = verified_quarantine_move(&src, &dest, false, Some(&hash_v1));
-    assert!(res.is_err(), "Must abort if source hash does not match expected");
+    assert!(
+        res.is_err(),
+        "Must abort if source hash does not match expected"
+    );
 
     // Source must remain preserved and not deleted
-    assert!(src.exists(), "Source file must never be deleted if verification fails");
+    assert!(
+        src.exists(),
+        "Source file must never be deleted if verification fails"
+    );
     assert!(!dest.exists(), "Destination must not exist if move failed");
-    assert_eq!(fs::read_to_string(&src).unwrap(), "Tampered content version 2!");
+    assert_eq!(
+        fs::read_to_string(&src).unwrap(),
+        "Tampered content version 2!"
+    );
 }
 
 #[test]
@@ -301,13 +343,24 @@ fn test_restore_conflict_prevents_silent_overwrite() {
     let record = q_res.unwrap();
 
     // Recreate a new file at original_dir/report.pdf to simulate user or app replacing it
-    fs::write(&target_file, "NEW UNRELATED FILE CREATED AT ORIGINAL LOCATION").unwrap();
+    fs::write(
+        &target_file,
+        "NEW UNRELATED FILE CREATED AT ORIGINAL LOCATION",
+    )
+    .unwrap();
 
     // Attempt to restore: MUST FAIL with conflict error rather than silently clobbering new file
     let restore_res = quarantine.restore_target(&record.quarantine_id, None, &conn);
-    assert!(!restore_res.success, "Restore must fail if target location already contains a file");
     assert!(
-        restore_res.error.as_deref().unwrap_or("").contains("already exists"),
+        !restore_res.success,
+        "Restore must fail if target location already contains a file"
+    );
+    assert!(
+        restore_res
+            .error
+            .as_deref()
+            .unwrap_or("")
+            .contains("already exists"),
         "Error must report that destination already exists"
     );
 
@@ -338,7 +391,10 @@ fn test_corrupt_database_cleans_wal_and_shm_sidecars() {
 
     let db = Database::new(db_path.clone());
     let conn = db.get_connection();
-    assert!(conn.is_ok(), "Database recovery must succeed despite corrupt DB and WAL");
+    assert!(
+        conn.is_ok(),
+        "Database recovery must succeed despite corrupt DB and WAL"
+    );
 
     let conn = conn.unwrap();
     let is_ok = Database::verify_integrity(&conn).unwrap();
@@ -352,26 +408,41 @@ fn test_corrupt_database_cleans_wal_and_shm_sidecars() {
         if name.contains("corrupt_") && name.ends_with(".db") {
             found_corrupt_db = true;
             let content = fs::read(entry.path()).unwrap();
-            assert_eq!(content, b"GARBAGE_DB_DATA_12345", "Preserved database artifact must preserve original bytes");
+            assert_eq!(
+                content, b"GARBAGE_DB_DATA_12345",
+                "Preserved database artifact must preserve original bytes"
+            );
             break;
         }
     }
-    assert!(found_corrupt_db, "Corrupt database must be quarantined and preserved as forensic artifact");
+    assert!(
+        found_corrupt_db,
+        "Corrupt database must be quarantined and preserved as forensic artifact"
+    );
 
     // 2. Any active WAL file created by SQLite for fresh DB must be fresh and not contain stale corrupt payload
     if wal_path.exists() {
         let fresh_wal_content = fs::read(&wal_path).unwrap();
-        assert_ne!(fresh_wal_content, b"STALE_WAL_TRANSACTIONS", "Active WAL must not contain stale corrupt transactions");
+        assert_ne!(
+            fresh_wal_content, b"STALE_WAL_TRANSACTIONS",
+            "Active WAL must not contain stale corrupt transactions"
+        );
     }
 
     // 3. Verify recovered clean database has 0 scans and 0 files (no phantom records)
     let count: i64 = conn
         .query_row("SELECT COUNT(*) FROM scan_sessions", [], |row| row.get(0))
         .unwrap();
-    assert_eq!(count, 0, "Fresh recovered database must report 0 scan sessions");
+    assert_eq!(
+        count, 0,
+        "Fresh recovered database must report 0 scan sessions"
+    );
 
     let file_count: i64 = conn
         .query_row("SELECT COUNT(*) FROM files", [], |row| row.get(0))
         .unwrap();
-    assert_eq!(file_count, 0, "Fresh recovered database must report 0 files");
+    assert_eq!(
+        file_count, 0,
+        "Fresh recovered database must report 0 files"
+    );
 }

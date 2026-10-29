@@ -20,12 +20,19 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             PathBuf::from(r"C:\")
         };
 
-        println!("[FileMind CLI] Starting real filesystem scan on: {:?}", scan_target);
+        println!(
+            "[FileMind CLI] Starting real filesystem scan on: {:?}",
+            scan_target
+        );
         let cancel_token = Arc::new(AtomicBool::new(false));
         let progress_cb = Arc::new(|prog: filemind_core::models::ScanProgressState| {
             print!(
                 "\r[Scan Progress] {:.1}% | Files: {} | Bytes: {} | Dirs: {} | Errors: {}",
-                prog.percent, prog.files_count, prog.bytes_count, prog.directories_count, prog.errors_count
+                prog.percent,
+                prog.files_count,
+                prog.bytes_count,
+                prog.directories_count,
+                prog.errors_count
             );
         });
 
@@ -51,7 +58,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         println!("- Total Files: {}", result.total_files);
         println!("- Total Directories: {}", result.total_directories);
         println!("- Logical Size: {} bytes", result.total_logical_bytes);
-        println!("- Allocated Physical Size: {} bytes", result.total_physical_bytes);
+        println!(
+            "- Allocated Physical Size: {} bytes",
+            result.total_physical_bytes
+        );
         println!("- Cluster Size: {} bytes", result.cluster_size_bytes);
         println!("- Errors Encountered: {}", result.errors.len());
 
@@ -74,7 +84,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         let db = Database::new(db_path.clone());
         let mut conn = db.get_connection()?;
         let pruned = RetentionManager::prune_older_than_days(&mut conn, days)?;
-        println!("[Retention] Pruned {} sessions older than {} days", pruned, days);
+        println!(
+            "[Retention] Pruned {} sessions older than {} days",
+            pruned, days
+        );
         return Ok(());
     }
 
@@ -95,7 +108,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         let open_url = format!("http://localhost:{}", port);
         std::thread::spawn(move || {
             std::thread::sleep(std::time::Duration::from_millis(500));
-            let _ = std::process::Command::new("explorer.exe").arg(&open_url).spawn();
+            let _ = std::process::Command::new("explorer.exe")
+                .arg(&open_url)
+                .spawn();
         });
     }
 

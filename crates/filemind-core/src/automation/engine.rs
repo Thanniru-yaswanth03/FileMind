@@ -29,7 +29,11 @@ impl AutomationEngine {
             .map(|d| d.as_millis() as u64)
             .unwrap_or(0);
 
-        let run_id = format!("run_{}_{}", now_epoch_ms, &rule.rule_id[..std::cmp::min(12, rule.rule_id.len())]);
+        let run_id = format!(
+            "run_{}_{}",
+            now_epoch_ms,
+            &rule.rule_id[..std::cmp::min(12, rule.rule_id.len())]
+        );
         let dry_run = dry_run_override.unwrap_or(rule.dry_run_mode);
 
         let mut actions_attempted = Vec::new();
@@ -72,11 +76,14 @@ impl AutomationEngine {
         for cond in &rule.conditions {
             match cond {
                 AutomationCondition::DiskFreeBelowBytes { bytes } => {
-                    let drive_to_check = if let AutomationTrigger::DiskSpaceThreshold { drive_letter, .. } = &rule.trigger {
-                        drive_letter.clone()
-                    } else {
-                        "C".to_string()
-                    };
+                    let drive_to_check =
+                        if let AutomationTrigger::DiskSpaceThreshold { drive_letter, .. } =
+                            &rule.trigger
+                        {
+                            drive_letter.clone()
+                        } else {
+                            "C".to_string()
+                        };
 
                     let vol_path_str = format!("{}:\\", drive_to_check);
                     let vol_info = query_volume_info(Path::new(&vol_path_str));
@@ -89,7 +96,13 @@ impl AutomationEngine {
                             free as f64 / 1_073_741_824.0,
                             *bytes as f64 / 1_073_741_824.0
                         );
-                        return Self::build_skipped_history(run_id, rule, trigger_context, now_epoch_ms, summary);
+                        return Self::build_skipped_history(
+                            run_id,
+                            rule,
+                            trigger_context,
+                            now_epoch_ms,
+                            summary,
+                        );
                     } else {
                         policy_decisions.push(format!(
                             "Condition satisfied: Free space on {}: is {:.2} GB (< {:.2} GB threshold)",
@@ -103,16 +116,26 @@ impl AutomationEngine {
                     policy_decisions.push("Condition evaluated: Git clean enforcement active for developer workspaces".to_string());
                 }
                 AutomationCondition::FileSizeAboveBytes { bytes } => {
-                    policy_decisions.push(format!("Condition evaluated: File size threshold >= {} bytes", bytes));
+                    policy_decisions.push(format!(
+                        "Condition evaluated: File size threshold >= {} bytes",
+                        bytes
+                    ));
                 }
                 AutomationCondition::FileTypeMatches { file_type } => {
-                    policy_decisions.push(format!("Condition evaluated: File type filter '{}'", file_type));
+                    policy_decisions.push(format!(
+                        "Condition evaluated: File type filter '{}'",
+                        file_type
+                    ));
                 }
                 AutomationCondition::PathPatternMatches { pattern } => {
-                    policy_decisions.push(format!("Condition evaluated: Path pattern '{}'", pattern));
+                    policy_decisions
+                        .push(format!("Condition evaluated: Path pattern '{}'", pattern));
                 }
                 AutomationCondition::ArtifactAgeDays { min_days } => {
-                    policy_decisions.push(format!("Condition evaluated: Artifact age >= {} days", min_days));
+                    policy_decisions.push(format!(
+                        "Condition evaluated: Artifact age >= {} days",
+                        min_days
+                    ));
                 }
             }
         }
@@ -122,12 +145,22 @@ impl AutomationEngine {
 
         for action in &rule.actions {
             match action {
-                AutomationAction::NotifyUser { title, message, severity } => {
-                    actions_attempted.push(format!("NotifyUser: [{}] {} - {}", severity, title, message));
+                AutomationAction::NotifyUser {
+                    title,
+                    message,
+                    severity,
+                } => {
+                    actions_attempted.push(format!(
+                        "NotifyUser: [{}] {} - {}",
+                        severity, title, message
+                    ));
                     policy_decisions.push(format!("Desktop notification emitted: '{}'", title));
                 }
 
-                AutomationAction::GenerateReport { output_path, format } => {
+                AutomationAction::GenerateReport {
+                    output_path,
+                    format,
+                } => {
                     actions_attempted.push(format!("GenerateReport: format '{}'", format));
                     let rep_summary = format!(
                         "Generated storage audit report for rule '{}' at epoch {}",
@@ -139,7 +172,10 @@ impl AutomationEngine {
                     policy_decisions.push(rep_summary);
                 }
 
-                AutomationAction::CreateCleanupPlan { goal_type, target_bytes } => {
+                AutomationAction::CreateCleanupPlan {
+                    goal_type,
+                    target_bytes,
+                } => {
                     actions_attempted.push(format!("CreateCleanupPlan: goal '{}'", goal_type));
 
                     let goal_str = match goal_type.as_str() {
@@ -170,12 +206,15 @@ impl AutomationEngine {
                             ));
                         }
                         Err(e) => {
-                            execution_error = Some(format!("Failed to generate cleanup plan: {}", e));
+                            execution_error =
+                                Some(format!("Failed to generate cleanup plan: {}", e));
                         }
                     }
                 }
 
-                AutomationAction::StageToQuarantine { dry_run: action_dry_run } => {
+                AutomationAction::StageToQuarantine {
+                    dry_run: action_dry_run,
+                } => {
                     let is_dry = dry_run || *action_dry_run;
                     actions_attempted.push(format!("StageToQuarantine: dry_run={}", is_dry));
 
@@ -204,7 +243,11 @@ impl AutomationEngine {
                             ));
                         } else if !rule.requires_explicit_approval {
                             // Stage candidate to quarantine
-                            match quarantine.quarantine_target(p, &format!("Automated Rule: {}", rule.name), conn) {
+                            match quarantine.quarantine_target(
+                                p,
+                                &format!("Automated Rule: {}", rule.name),
+                                conn,
+                            ) {
                                 Ok(rec) => {
                                     files_affected += 1;
                                     bytes_affected += rec.size_bytes;
@@ -214,7 +257,10 @@ impl AutomationEngine {
                                     ));
                                 }
                                 Err(e) => {
-                                    execution_error = Some(format!("Quarantine error for '{}': {}", scope_dir, e));
+                                    execution_error = Some(format!(
+                                        "Quarantine error for '{}': {}",
+                                        scope_dir, e
+                                    ));
                                 }
                             }
                         } else {
@@ -226,7 +272,10 @@ impl AutomationEngine {
                     }
                 }
 
-                AutomationAction::OrganizeToFolder { target_directory, subfolder_pattern } => {
+                AutomationAction::OrganizeToFolder {
+                    target_directory,
+                    subfolder_pattern,
+                } => {
                     actions_attempted.push(format!(
                         "OrganizeToFolder: target='{}', pattern='{}'",
                         target_directory, subfolder_pattern
@@ -239,7 +288,10 @@ impl AutomationEngine {
 
                 AutomationAction::RunScan { root_path } => {
                     actions_attempted.push(format!("RunScan: root='{}'", root_path));
-                    policy_decisions.push(format!("Background storage scan scheduled for '{}'", root_path));
+                    policy_decisions.push(format!(
+                        "Background storage scan scheduled for '{}'",
+                        root_path
+                    ));
                 }
             }
         }
@@ -265,7 +317,10 @@ impl AutomationEngine {
                 bytes_affected as f64 / (1024.0 * 1024.0)
             )
         } else if execution_error.is_some() {
-            format!("Rule execution encountered errors: {}", execution_error.as_deref().unwrap_or("Unknown"))
+            format!(
+                "Rule execution encountered errors: {}",
+                execution_error.as_deref().unwrap_or("Unknown")
+            )
         } else {
             format!(
                 "Rule executed successfully: {} actions completed, {} files affected ({:.2} MB reclaimed).",

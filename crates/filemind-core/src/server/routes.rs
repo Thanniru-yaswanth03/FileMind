@@ -87,8 +87,12 @@ impl AppState {
 
 pub fn start_server(port: u16, state: Arc<AppState>) -> Result<(), Box<dyn std::error::Error>> {
     let addr = format!("127.0.0.1:{}", port);
-    let server = Server::http(&addr).map_err(|e| format!("Failed to bind server on {}: {}", addr, e))?;
-    println!("[FileMind Core] Native Storage Engine listening on http://{}", addr);
+    let server =
+        Server::http(&addr).map_err(|e| format!("Failed to bind server on {}: {}", addr, e))?;
+    println!(
+        "[FileMind Core] Native Storage Engine listening on http://{}",
+        addr
+    );
 
     for request in server.incoming_requests() {
         let state_clone = Arc::clone(&state);
@@ -123,7 +127,12 @@ fn is_trusted_origin(origin: &str) -> bool {
 
 fn get_allowed_origin(request: &Request) -> Option<String> {
     for header in request.headers() {
-        if header.field.as_str().as_str().eq_ignore_ascii_case("origin") {
+        if header
+            .field
+            .as_str()
+            .as_str()
+            .eq_ignore_ascii_case("origin")
+        {
             let origin_str = header.value.as_str();
             if is_trusted_origin(origin_str) {
                 return Some(origin_str.to_string());
@@ -138,7 +147,12 @@ fn get_allowed_origin(request: &Request) -> Option<String> {
 
 fn verify_session_capability(request: &Request, expected_token: &str) -> bool {
     for header in request.headers() {
-        if header.field.as_str().as_str().eq_ignore_ascii_case("x-filemind-session-token") {
+        if header
+            .field
+            .as_str()
+            .as_str()
+            .eq_ignore_ascii_case("x-filemind-session-token")
+        {
             let val = header.value.as_str().trim();
             return val == expected_token;
         }
@@ -164,9 +178,27 @@ fn handle_request(mut request: Request, state: Arc<AppState>) {
     // Handle CORS preflight
     if request.method() == &Method::Options {
         let resp = Response::empty(StatusCode(200))
-            .with_header(Header::from_bytes(b"Access-Control-Allow-Origin".as_slice(), allowed_origin.as_bytes()).unwrap())
-            .with_header(Header::from_bytes(&b"Access-Control-Allow-Methods"[..], &b"GET, POST, DELETE, OPTIONS"[..]).unwrap())
-            .with_header(Header::from_bytes(&b"Access-Control-Allow-Headers"[..], &b"Content-Type, X-FileMind-Session-Token"[..]).unwrap());
+            .with_header(
+                Header::from_bytes(
+                    b"Access-Control-Allow-Origin".as_slice(),
+                    allowed_origin.as_bytes(),
+                )
+                .unwrap(),
+            )
+            .with_header(
+                Header::from_bytes(
+                    &b"Access-Control-Allow-Methods"[..],
+                    &b"GET, POST, DELETE, OPTIONS"[..],
+                )
+                .unwrap(),
+            )
+            .with_header(
+                Header::from_bytes(
+                    &b"Access-Control-Allow-Headers"[..],
+                    &b"Content-Type, X-FileMind-Session-Token"[..],
+                )
+                .unwrap(),
+            );
         let _ = request.respond(resp);
         return;
     }
@@ -179,14 +211,27 @@ fn handle_request(mut request: Request, state: Arc<AppState>) {
         let decoded_rel_path = recursive_url_decode(raw_rel_path);
 
         // Path Traversal Defense: Reject paths containing '..' or Windows drive separators or alternate data streams immediately
-        if raw_rel_path.contains("..") || raw_rel_path.contains('\\') || raw_rel_path.contains(':')
-            || decoded_rel_path.contains("..") || decoded_rel_path.contains('\\') || decoded_rel_path.contains(':')
-            || decoded_rel_path.starts_with('/') || decoded_rel_path.starts_with('\\')
+        if raw_rel_path.contains("..")
+            || raw_rel_path.contains('\\')
+            || raw_rel_path.contains(':')
+            || decoded_rel_path.contains("..")
+            || decoded_rel_path.contains('\\')
+            || decoded_rel_path.contains(':')
+            || decoded_rel_path.starts_with('/')
+            || decoded_rel_path.starts_with('\\')
         {
             let resp = Response::from_string(r#"{"error":"Forbidden: Invalid asset path"}"#)
                 .with_status_code(StatusCode(403))
-                .with_header(Header::from_bytes(&b"Content-Type"[..], &b"application/json"[..]).unwrap())
-                .with_header(Header::from_bytes(b"Access-Control-Allow-Origin".as_slice(), allowed_origin.as_bytes()).unwrap());
+                .with_header(
+                    Header::from_bytes(&b"Content-Type"[..], &b"application/json"[..]).unwrap(),
+                )
+                .with_header(
+                    Header::from_bytes(
+                        b"Access-Control-Allow-Origin".as_slice(),
+                        allowed_origin.as_bytes(),
+                    )
+                    .unwrap(),
+                );
             let _ = request.respond(resp);
             return;
         }
@@ -207,7 +252,9 @@ fn handle_request(mut request: Request, state: Arc<AppState>) {
         let base_dist = dist_dirs.into_iter().find(|d| d.exists());
 
         if let Some(dist_path) = base_dist {
-            let canonical_dist = dist_path.canonicalize().unwrap_or_else(|_| dist_path.clone());
+            let canonical_dist = dist_path
+                .canonicalize()
+                .unwrap_or_else(|_| dist_path.clone());
             let candidate = if decoded_rel_path.is_empty() {
                 dist_path.join("index.html")
             } else {
@@ -217,10 +264,21 @@ fn handle_request(mut request: Request, state: Arc<AppState>) {
             let target_file = if candidate.exists() && candidate.is_file() {
                 if let Ok(canonical_target) = candidate.canonicalize() {
                     if !canonical_target.starts_with(&canonical_dist) {
-                        let resp = Response::from_string(r#"{"error":"Forbidden: Path traversal blocked"}"#)
-                            .with_status_code(StatusCode(403))
-                            .with_header(Header::from_bytes(&b"Content-Type"[..], &b"application/json"[..]).unwrap())
-                            .with_header(Header::from_bytes(b"Access-Control-Allow-Origin".as_slice(), allowed_origin.as_bytes()).unwrap());
+                        let resp = Response::from_string(
+                            r#"{"error":"Forbidden: Path traversal blocked"}"#,
+                        )
+                        .with_status_code(StatusCode(403))
+                        .with_header(
+                            Header::from_bytes(&b"Content-Type"[..], &b"application/json"[..])
+                                .unwrap(),
+                        )
+                        .with_header(
+                            Header::from_bytes(
+                                b"Access-Control-Allow-Origin".as_slice(),
+                                allowed_origin.as_bytes(),
+                            )
+                            .unwrap(),
+                        );
                         let _ = request.respond(resp);
                         return;
                     }
@@ -231,15 +289,26 @@ fn handle_request(mut request: Request, state: Arc<AppState>) {
             } else {
                 let resp = Response::from_string(r#"{"error":"Asset Not Found"}"#)
                     .with_status_code(StatusCode(404))
-                    .with_header(Header::from_bytes(&b"Content-Type"[..], &b"application/json"[..]).unwrap())
-                    .with_header(Header::from_bytes(b"Access-Control-Allow-Origin".as_slice(), allowed_origin.as_bytes()).unwrap());
+                    .with_header(
+                        Header::from_bytes(&b"Content-Type"[..], &b"application/json"[..]).unwrap(),
+                    )
+                    .with_header(
+                        Header::from_bytes(
+                            b"Access-Control-Allow-Origin".as_slice(),
+                            allowed_origin.as_bytes(),
+                        )
+                        .unwrap(),
+                    );
                 let _ = request.respond(resp);
                 return;
             };
 
             if target_file.exists() {
                 if let Ok(content) = std::fs::read(&target_file) {
-                    let ext = target_file.extension().and_then(|e| e.to_str()).unwrap_or("");
+                    let ext = target_file
+                        .extension()
+                        .and_then(|e| e.to_str())
+                        .unwrap_or("");
                     let mime = match ext {
                         "html" => "text/html; charset=utf-8",
                         "js" | "mjs" => "application/javascript; charset=utf-8",
@@ -255,7 +324,10 @@ fn handle_request(mut request: Request, state: Arc<AppState>) {
                     // For index.html, inject session capability token into meta tag
                     let data = if ext == "html" {
                         let html_str = String::from_utf8_lossy(&content);
-                        let meta_tag = format!(r#"<meta name="filemind-session-token" content="{}"></head>"#, state.session_token);
+                        let meta_tag = format!(
+                            r#"<meta name="filemind-session-token" content="{}"></head>"#,
+                            state.session_token
+                        );
                         let modified = html_str.replace("</head>", &meta_tag);
                         modified.into_bytes()
                     } else {
@@ -264,8 +336,16 @@ fn handle_request(mut request: Request, state: Arc<AppState>) {
 
                     let resp = Response::from_data(data)
                         .with_status_code(StatusCode(200))
-                        .with_header(Header::from_bytes(&b"Content-Type"[..], mime.as_bytes()).unwrap())
-                        .with_header(Header::from_bytes(b"Access-Control-Allow-Origin".as_slice(), allowed_origin.as_bytes()).unwrap());
+                        .with_header(
+                            Header::from_bytes(&b"Content-Type"[..], mime.as_bytes()).unwrap(),
+                        )
+                        .with_header(
+                            Header::from_bytes(
+                                b"Access-Control-Allow-Origin".as_slice(),
+                                allowed_origin.as_bytes(),
+                            )
+                            .unwrap(),
+                        );
                     let _ = request.respond(resp);
                     return;
                 }
@@ -306,7 +386,11 @@ fn handle_request(mut request: Request, state: Arc<AppState>) {
                     cluster_size_bytes: v.cluster_size_bytes,
                     total_bytes: v.total_bytes,
                     free_bytes: v.free_bytes,
-                    used_bytes: if v.total_bytes >= v.free_bytes { v.total_bytes - v.free_bytes } else { 0 },
+                    used_bytes: if v.total_bytes >= v.free_bytes {
+                        v.total_bytes - v.free_bytes
+                    } else {
+                        0
+                    },
                     is_system_drive: v.is_system_drive,
                     last_scanned_at: "2026-10-28T12:00:00Z".to_string(),
                     scan_freshness: "fresh".to_string(),
@@ -324,7 +408,10 @@ fn handle_request(mut request: Request, state: Arc<AppState>) {
                 Ok(start_req) => {
                     let target_path = PathBuf::from(&start_req.path);
                     if !target_path.exists() {
-                        (400, json!({ "error": format!("Scan root does not exist: '{}'", start_req.path) }))
+                        (
+                            400,
+                            json!({ "error": format!("Scan root does not exist: '{}'", start_req.path) }),
+                        )
                     } else {
                         let cancel_token = Arc::new(AtomicBool::new(false));
                         let session_id = format!(
@@ -337,7 +424,8 @@ fn handle_request(mut request: Request, state: Arc<AppState>) {
 
                         // Set active scan
                         {
-                            let mut active = state.active_scan.lock().unwrap_or_else(|p| p.into_inner());
+                            let mut active =
+                                state.active_scan.lock().unwrap_or_else(|p| p.into_inner());
                             *active = Some(ActiveScanState {
                                 session_id: session_id.clone(),
                                 root_path: start_req.path.clone(),
@@ -347,7 +435,10 @@ fn handle_request(mut request: Request, state: Arc<AppState>) {
 
                         // Reset progress
                         {
-                            let mut prog = state.latest_progress.lock().unwrap_or_else(|p| p.into_inner());
+                            let mut prog = state
+                                .latest_progress
+                                .lock()
+                                .unwrap_or_else(|p| p.into_inner());
                             *prog = ScanProgressState {
                                 percent: 0.0,
                                 current_path: start_req.path.clone(),
@@ -404,11 +495,17 @@ fn handle_request(mut request: Request, state: Arc<AppState>) {
 
                             // Finalize active scan and progress
                             {
-                                let mut active = state_bg.active_scan.lock().unwrap_or_else(|p| p.into_inner());
+                                let mut active = state_bg
+                                    .active_scan
+                                    .lock()
+                                    .unwrap_or_else(|p| p.into_inner());
                                 *active = None;
                             }
                             {
-                                let mut prog = state_bg.latest_progress.lock().unwrap_or_else(|p| p.into_inner());
+                                let mut prog = state_bg
+                                    .latest_progress
+                                    .lock()
+                                    .unwrap_or_else(|p| p.into_inner());
                                 prog.is_scanning = false;
                                 prog.percent = 100.0;
                             }
@@ -417,7 +514,10 @@ fn handle_request(mut request: Request, state: Arc<AppState>) {
                         (200, json!({ "status": "started", "sessionId": session_id }))
                     }
                 }
-                Err(e) => (400, json!({ "error": format!("Invalid JSON request: {}", e) })),
+                Err(e) => (
+                    400,
+                    json!({ "error": format!("Invalid JSON request: {}", e) }),
+                ),
             }
         }
 
@@ -425,16 +525,26 @@ fn handle_request(mut request: Request, state: Arc<AppState>) {
             let mut active = state.active_scan.lock().unwrap_or_else(|p| p.into_inner());
             if let Some(scan) = active.take() {
                 scan.cancel_token.store(true, Ordering::Relaxed);
-                let mut prog = state.latest_progress.lock().unwrap_or_else(|p| p.into_inner());
+                let mut prog = state
+                    .latest_progress
+                    .lock()
+                    .unwrap_or_else(|p| p.into_inner());
                 prog.is_scanning = false;
-                (200, json!({ "status": "cancelled", "sessionId": scan.session_id }))
+                (
+                    200,
+                    json!({ "status": "cancelled", "sessionId": scan.session_id }),
+                )
             } else {
                 (200, json!({ "status": "not_running" }))
             }
         }
 
         (Method::Get, "/api/scan/progress") => {
-            let prog = state.latest_progress.lock().unwrap_or_else(|p| p.into_inner()).clone();
+            let prog = state
+                .latest_progress
+                .lock()
+                .unwrap_or_else(|p| p.into_inner())
+                .clone();
             (200, json!(prog))
         }
 
@@ -443,9 +553,10 @@ fn handle_request(mut request: Request, state: Arc<AppState>) {
             match state.db.get_connection() {
                 Ok(conn) => match Database::get_latest_session(&conn, root) {
                     Ok(Some(session)) => {
-                        let errors = Database::get_session_errors(&conn, &session.session_id, 20).unwrap_or_default();
-                        let vol_info = query_volume_info(Path::new(&session.root_path)).unwrap_or_else(|_| {
-                            crate::adapter::volume::VolumeInfo {
+                        let errors = Database::get_session_errors(&conn, &session.session_id, 20)
+                            .unwrap_or_default();
+                        let vol_info = query_volume_info(Path::new(&session.root_path))
+                            .unwrap_or_else(|_| crate::adapter::volume::VolumeInfo {
                                 root_path: session.root_path.clone(),
                                 drive_letter: "C".to_string(),
                                 volume_label: "Local Disk".to_string(),
@@ -456,8 +567,7 @@ fn handle_request(mut request: Request, state: Arc<AppState>) {
                                 available_bytes: 0,
                                 is_system_drive: false,
                                 volume_serial: 0,
-                            }
-                        });
+                            });
 
                         let dummy_result = crate::scanner::walker::ScanResult {
                             root_path: session.root_path.clone(),
@@ -486,19 +596,23 @@ fn handle_request(mut request: Request, state: Arc<AppState>) {
                     Ok(None) => (404, json!({ "error": "No scan sessions found" })),
                     Err(e) => (500, json!({ "error": format!("Database error: {}", e) })),
                 },
-                Err(e) => (500, json!({ "error": format!("Failed to connect to database: {}", e) })),
+                Err(e) => (
+                    500,
+                    json!({ "error": format!("Failed to connect to database: {}", e) }),
+                ),
             }
         }
 
-        (Method::Get, "/api/scan/sessions") => {
-            match state.db.get_connection() {
-                Ok(conn) => match Database::list_sessions(&conn) {
-                    Ok(sessions) => (200, json!(sessions)),
-                    Err(e) => (500, json!({ "error": format!("Database error: {}", e) })),
-                },
-                Err(e) => (500, json!({ "error": format!("Failed to connect to database: {}", e) })),
-            }
-        }
+        (Method::Get, "/api/scan/sessions") => match state.db.get_connection() {
+            Ok(conn) => match Database::list_sessions(&conn) {
+                Ok(sessions) => (200, json!(sessions)),
+                Err(e) => (500, json!({ "error": format!("Database error: {}", e) })),
+            },
+            Err(e) => (
+                500,
+                json!({ "error": format!("Failed to connect to database: {}", e) }),
+            ),
+        },
 
         (Method::Get, "/api/files") => {
             let mut query = FileListQuery::default();
@@ -517,12 +631,18 @@ fn handle_request(mut request: Request, state: Arc<AppState>) {
                     Ok(resp) => (200, json!(resp)),
                     Err(e) => (500, json!({ "error": format!("Database error: {}", e) })),
                 },
-                Err(e) => (500, json!({ "error": format!("Failed to connect to database: {}", e) })),
+                Err(e) => (
+                    500,
+                    json!({ "error": format!("Failed to connect to database: {}", e) }),
+                ),
             }
         }
 
         (Method::Get, "/api/folders/ranking") => {
-            let limit: u32 = query_params.get("limit").and_then(|s| s.parse().ok()).unwrap_or(20);
+            let limit: u32 = query_params
+                .get("limit")
+                .and_then(|s| s.parse().ok())
+                .unwrap_or(20);
             match state.db.get_connection() {
                 Ok(conn) => {
                     let session_id = match query_params.get("sessionId") {
@@ -543,29 +663,30 @@ fn handle_request(mut request: Request, state: Arc<AppState>) {
             }
         }
 
-        (Method::Get, "/api/categories") => {
-            match state.db.get_connection() {
-                Ok(conn) => {
-                    let session_id = match query_params.get("sessionId") {
-                        Some(sid) => sid.clone(),
-                        None => Database::get_latest_session(&conn, None)
-                            .ok()
-                            .flatten()
-                            .map(|s| s.session_id)
-                            .unwrap_or_default(),
-                    };
+        (Method::Get, "/api/categories") => match state.db.get_connection() {
+            Ok(conn) => {
+                let session_id = match query_params.get("sessionId") {
+                    Some(sid) => sid.clone(),
+                    None => Database::get_latest_session(&conn, None)
+                        .ok()
+                        .flatten()
+                        .map(|s| s.session_id)
+                        .unwrap_or_default(),
+                };
 
-                    match Database::get_category_breakdown(&conn, &session_id) {
-                        Ok(breakdown) => (200, json!(breakdown)),
-                        Err(e) => (500, json!({ "error": format!("Database error: {}", e) })),
-                    }
+                match Database::get_category_breakdown(&conn, &session_id) {
+                    Ok(breakdown) => (200, json!(breakdown)),
+                    Err(e) => (500, json!({ "error": format!("Database error: {}", e) })),
                 }
-                Err(e) => (500, json!({ "error": format!("Database error: {}", e) })),
             }
-        }
+            Err(e) => (500, json!({ "error": format!("Database error: {}", e) })),
+        },
 
         (Method::Get, "/api/large-files") => {
-            let limit: u32 = query_params.get("limit").and_then(|s| s.parse().ok()).unwrap_or(100);
+            let limit: u32 = query_params
+                .get("limit")
+                .and_then(|s| s.parse().ok())
+                .unwrap_or(100);
             let mut query = FileListQuery::default();
             query.session_id = query_params.get("sessionId").cloned();
             query.sort_by = Some("size".to_string());
@@ -582,7 +703,10 @@ fn handle_request(mut request: Request, state: Arc<AppState>) {
         }
 
         (Method::Get, "/api/errors") => {
-            let limit: u32 = query_params.get("limit").and_then(|s| s.parse().ok()).unwrap_or(100);
+            let limit: u32 = query_params
+                .get("limit")
+                .and_then(|s| s.parse().ok())
+                .unwrap_or(100);
             match state.db.get_connection() {
                 Ok(conn) => {
                     let session_id = match query_params.get("sessionId") {
@@ -613,7 +737,10 @@ fn handle_request(mut request: Request, state: Arc<AppState>) {
                         Err(e) => (400, json!({ "error": e })),
                     }
                 } else {
-                    (400, json!({ "error": "Missing 'path' parameter in request" }))
+                    (
+                        400,
+                        json!({ "error": "Missing 'path' parameter in request" }),
+                    )
                 }
             } else {
                 (400, json!({ "error": "Invalid JSON body" }))
@@ -630,15 +757,22 @@ fn handle_request(mut request: Request, state: Arc<AppState>) {
                 ) {
                     match state.db.get_connection() {
                         Ok(mut conn) => {
-                            match ReconciliationScanner::reconcile(&mut conn, sid, Path::new(root)) {
+                            match ReconciliationScanner::reconcile(&mut conn, sid, Path::new(root))
+                            {
                                 Ok(report) => (200, json!(report)),
-                                Err(e) => (500, json!({ "error": format!("Reconciliation failed: {}", e) })),
+                                Err(e) => (
+                                    500,
+                                    json!({ "error": format!("Reconciliation failed: {}", e) }),
+                                ),
                             }
                         }
                         Err(e) => (500, json!({ "error": format!("Database error: {}", e) })),
                     }
                 } else {
-                    (400, json!({ "error": "Missing sessionId or rootPath in request" }))
+                    (
+                        400,
+                        json!({ "error": "Missing sessionId or rootPath in request" }),
+                    )
                 }
             } else {
                 (400, json!({ "error": "Invalid JSON body" }))
@@ -653,9 +787,13 @@ fn handle_request(mut request: Request, state: Arc<AppState>) {
                 Ok(conn) => {
                     let mut req = DuplicateScanRequest::default();
                     req.session_id = query_params.get("sessionId").cloned();
-                    req.min_size_bytes = query_params.get("minSizeBytes").and_then(|s| s.parse().ok());
+                    req.min_size_bytes = query_params
+                        .get("minSizeBytes")
+                        .and_then(|s| s.parse().ok());
                     req.max_groups = query_params.get("maxGroups").and_then(|s| s.parse().ok());
-                    req.verify_byte_by_byte = query_params.get("verifyBytes").map(|s| s == "true" || s == "1");
+                    req.verify_byte_by_byte = query_params
+                        .get("verifyBytes")
+                        .map(|s| s == "true" || s == "1");
 
                     // If no sessionId specified, pick latest session
                     if req.session_id.is_none() {
@@ -667,10 +805,16 @@ fn handle_request(mut request: Request, state: Arc<AppState>) {
 
                     match crate::duplicate::pipeline::DuplicatePipeline::execute(&conn, &req) {
                         Ok(res) => (200, json!(res)),
-                        Err(e) => (500, json!({ "error": format!("Duplicate detection failed: {}", e) })),
+                        Err(e) => (
+                            500,
+                            json!({ "error": format!("Duplicate detection failed: {}", e) }),
+                        ),
                     }
                 }
-                Err(e) => (500, json!({ "error": format!("Database connection error: {}", e) })),
+                Err(e) => (
+                    500,
+                    json!({ "error": format!("Database connection error: {}", e) }),
+                ),
             }
         }
 
@@ -679,13 +823,19 @@ fn handle_request(mut request: Request, state: Arc<AppState>) {
             let _ = request.as_reader().read_to_string(&mut body);
             if let Ok(req) = serde_json::from_str::<VerifyGroupRequest>(&body) {
                 if req.file_paths.len() < 2 {
-                    (400, json!({ "error": "At least 2 file paths required for comparison" }))
+                    (
+                        400,
+                        json!({ "error": "At least 2 file paths required for comparison" }),
+                    )
                 } else {
                     let base_path = PathBuf::from(&req.file_paths[0]);
                     let mut all_match = true;
 
                     for other in req.file_paths.iter().skip(1) {
-                        match crate::duplicate::hashing::verify_byte_by_byte(&base_path, Path::new(other)) {
+                        match crate::duplicate::hashing::verify_byte_by_byte(
+                            &base_path,
+                            Path::new(other),
+                        ) {
                             Ok(true) => {}
                             _ => {
                                 all_match = false;
@@ -721,7 +871,10 @@ fn handle_request(mut request: Request, state: Arc<AppState>) {
         (Method::Get, "/api/search") => {
             let mut query = FileListQuery::default();
             query.session_id = query_params.get("sessionId").cloned();
-            query.search = query_params.get("q").or_else(|| query_params.get("search")).cloned();
+            query.search = query_params
+                .get("q")
+                .or_else(|| query_params.get("search"))
+                .cloned();
             query.category = query_params.get("category").cloned();
             query.extension = query_params.get("extension").cloned();
             query.path_prefix = query_params.get("prefix").cloned();
@@ -733,10 +886,15 @@ fn handle_request(mut request: Request, state: Arc<AppState>) {
             query.offset = query_params.get("offset").and_then(|s| s.parse().ok());
 
             match state.db.get_connection() {
-                Ok(conn) => match crate::search::metadata::MetadataSearchEngine::search(&conn, &query) {
-                    Ok(resp) => (200, json!(resp)),
-                    Err(e) => (500, json!({ "error": format!("Search query error: {}", e) })),
-                },
+                Ok(conn) => {
+                    match crate::search::metadata::MetadataSearchEngine::search(&conn, &query) {
+                        Ok(resp) => (200, json!(resp)),
+                        Err(e) => (
+                            500,
+                            json!({ "error": format!("Search query error: {}", e) }),
+                        ),
+                    }
+                }
                 Err(e) => (500, json!({ "error": format!("Database error: {}", e) })),
             }
         }
@@ -757,58 +915,76 @@ fn handle_request(mut request: Request, state: Arc<AppState>) {
             match state.db.get_connection() {
                 Ok(conn) => match crate::search::fts::FtsEngine::search_content(&conn, &query) {
                     Ok(resp) => (200, json!(resp)),
-                    Err(e) => (500, json!({ "error": format!("Content search error: {}", e) })),
+                    Err(e) => (
+                        500,
+                        json!({ "error": format!("Content search error: {}", e) }),
+                    ),
                 },
-                Err(e) => (500, json!({ "error": format!("Database connection error: {}", e) })),
+                Err(e) => (
+                    500,
+                    json!({ "error": format!("Database connection error: {}", e) }),
+                ),
             }
         }
 
         (Method::Post, "/api/content/index") => {
             let mut body = String::new();
             let _ = request.as_reader().read_to_string(&mut body);
-            let val = serde_json::from_str::<serde_json::Value>(&body).unwrap_or(serde_json::Value::Null);
+            let val =
+                serde_json::from_str::<serde_json::Value>(&body).unwrap_or(serde_json::Value::Null);
 
             let session_id = val.get("sessionId").and_then(|v| v.as_str());
             let max_files = val.get("maxFiles").and_then(|v| v.as_u64()).unwrap_or(200) as usize;
 
             match state.db.get_connection() {
-                Ok(mut conn) => match crate::search::fts::FtsEngine::index_documents(&mut conn, session_id, max_files) {
+                Ok(mut conn) => match crate::search::fts::FtsEngine::index_documents(
+                    &mut conn, session_id, max_files,
+                ) {
                     Ok(progress) => (200, json!(progress)),
-                    Err(e) => (500, json!({ "error": format!("Document indexing failed: {}", e) })),
+                    Err(e) => (
+                        500,
+                        json!({ "error": format!("Document indexing failed: {}", e) }),
+                    ),
                 },
                 Err(e) => (500, json!({ "error": format!("Database error: {}", e) })),
             }
         }
 
-        (Method::Get, "/api/content/status") => {
-            match state.db.get_connection() {
-                Ok(conn) => match crate::search::fts::FtsEngine::get_status(&conn) {
-                    Ok(status) => (200, json!(status)),
-                    Err(e) => (500, json!({ "error": format!("Content status query error: {}", e) })),
-                },
-                Err(e) => (500, json!({ "error": format!("Database error: {}", e) })),
-            }
-        }
+        (Method::Get, "/api/content/status") => match state.db.get_connection() {
+            Ok(conn) => match crate::search::fts::FtsEngine::get_status(&conn) {
+                Ok(status) => (200, json!(status)),
+                Err(e) => (
+                    500,
+                    json!({ "error": format!("Content status query error: {}", e) }),
+                ),
+            },
+            Err(e) => (500, json!({ "error": format!("Database error: {}", e) })),
+        },
 
-        (Method::Post, "/api/content/clear") => {
-            match state.db.get_connection() {
-                Ok(mut conn) => match crate::search::fts::FtsEngine::clear(&mut conn) {
-                    Ok(()) => (200, json!({ "status": "cleared" })),
-                    Err(e) => (500, json!({ "error": format!("Failed to clear content index: {}", e) })),
-                },
-                Err(e) => (500, json!({ "error": format!("Database error: {}", e) })),
-            }
-        }
+        (Method::Post, "/api/content/clear") => match state.db.get_connection() {
+            Ok(mut conn) => match crate::search::fts::FtsEngine::clear(&mut conn) {
+                Ok(()) => (200, json!({ "status": "cleared" })),
+                Err(e) => (
+                    500,
+                    json!({ "error": format!("Failed to clear content index: {}", e) }),
+                ),
+            },
+            Err(e) => (500, json!({ "error": format!("Database error: {}", e) })),
+        },
 
         (Method::Post, "/api/safety/evaluate") => {
             let mut body_str = String::new();
             if let Err(e) = request.as_reader().read_to_string(&mut body_str) {
-                (400, json!({ "error": format!("Failed to read request body: {}", e) }))
+                (
+                    400,
+                    json!({ "error": format!("Failed to read request body: {}", e) }),
+                )
             } else {
                 match serde_json::from_str::<SafetyEvaluationRequest>(&body_str) {
                     Ok(req) => {
                         let op = req.operation.as_deref().unwrap_or("evaluate");
-                        let assessments = crate::safety::SafetyGuardian::evaluate_batch(&req.paths, op);
+                        let assessments =
+                            crate::safety::SafetyGuardian::evaluate_batch(&req.paths, op);
 
                         // Persist evaluation audits in SQLite
                         if let Ok(conn) = state.db.get_connection() {
@@ -824,7 +1000,11 @@ fn handle_request(mut request: Request, state: Arc<AppState>) {
                                         is_permitted: a.is_permitted,
                                         rule_matches: a.rule_matches.clone(),
                                         evidence: a.evidence.clone(),
-                                        block_reasons: a.block_reason.clone().map(|r| vec![r]).unwrap_or_default(),
+                                        block_reasons: a
+                                            .block_reason
+                                            .clone()
+                                            .map(|r| vec![r])
+                                            .unwrap_or_default(),
                                         toctou_verified: false,
                                         executed: false,
                                         execution_result: None,
@@ -836,18 +1016,27 @@ fn handle_request(mut request: Request, state: Arc<AppState>) {
 
                         let total = assessments.len();
                         let permitted = assessments.iter().filter(|a| a.is_permitted).count();
-                        let review = assessments.iter().filter(|a| a.classification == SafetyClassification::ReviewRequired).count();
+                        let review = assessments
+                            .iter()
+                            .filter(|a| a.classification == SafetyClassification::ReviewRequired)
+                            .count();
                         let blocked = total - permitted;
 
-                        (200, json!(SafetyEvaluationResponse {
-                            assessments,
-                            total_evaluated: total,
-                            permitted_count: permitted,
-                            review_required_count: review,
-                            blocked_count: blocked,
-                        }))
+                        (
+                            200,
+                            json!(SafetyEvaluationResponse {
+                                assessments,
+                                total_evaluated: total,
+                                permitted_count: permitted,
+                                review_required_count: review,
+                                blocked_count: blocked,
+                            }),
+                        )
                     }
-                    Err(e) => (400, json!({ "error": format!("Invalid JSON request: {}", e) })),
+                    Err(e) => (
+                        400,
+                        json!({ "error": format!("Invalid JSON request: {}", e) }),
+                    ),
                 }
             }
         }
@@ -861,7 +1050,10 @@ fn handle_request(mut request: Request, state: Arc<AppState>) {
             match state.db.get_connection() {
                 Ok(conn) => match crate::safety::AuditLogger::fetch_recent(&conn, limit) {
                     Ok(records) => (200, json!(records)),
-                    Err(e) => (500, json!({ "error": format!("Failed to fetch safety audit log: {}", e) })),
+                    Err(e) => (
+                        500,
+                        json!({ "error": format!("Failed to fetch safety audit log: {}", e) }),
+                    ),
                 },
                 Err(e) => (500, json!({ "error": format!("Database error: {}", e) })),
             }
@@ -870,7 +1062,10 @@ fn handle_request(mut request: Request, state: Arc<AppState>) {
         (Method::Post, "/api/safety/execute") => {
             let mut body_str = String::new();
             if let Err(e) = request.as_reader().read_to_string(&mut body_str) {
-                (400, json!({ "error": format!("Failed to read request body: {}", e) }))
+                (
+                    400,
+                    json!({ "error": format!("Failed to read request body: {}", e) }),
+                )
             } else {
                 match serde_json::from_str::<ExecuteCleanupRequest>(&body_str) {
                     Ok(req) => {
@@ -882,12 +1077,14 @@ fn handle_request(mut request: Request, state: Arc<AppState>) {
                         for p in &req.paths {
                             let path_obj = Path::new(p);
                             let res = match &conn_res {
-                                Ok(conn) => crate::safety::SafetyGuardian::execute_guarded_operation(
-                                    path_obj,
-                                    &req.operation,
-                                    None,
-                                    Some(conn),
-                                ),
+                                Ok(conn) => {
+                                    crate::safety::SafetyGuardian::execute_guarded_operation(
+                                        path_obj,
+                                        &req.operation,
+                                        None,
+                                        Some(conn),
+                                    )
+                                }
                                 Err(_) => crate::safety::SafetyGuardian::execute_guarded_operation(
                                     path_obj,
                                     &req.operation,
@@ -904,20 +1101,27 @@ fn handle_request(mut request: Request, state: Arc<AppState>) {
                             results.push(res);
                         }
 
-                        (200, json!(ExecuteCleanupResponse {
-                            results,
-                            total_succeeded: succeeded,
-                            total_failed: failed,
-                            total_bytes_reclaimed: 0,
-                        }))
+                        (
+                            200,
+                            json!(ExecuteCleanupResponse {
+                                results,
+                                total_succeeded: succeeded,
+                                total_failed: failed,
+                                total_bytes_reclaimed: 0,
+                            }),
+                        )
                     }
-                    Err(e) => (400, json!({ "error": format!("Invalid JSON request: {}", e) })),
+                    Err(e) => (
+                        400,
+                        json!({ "error": format!("Invalid JSON request: {}", e) }),
+                    ),
                 }
             }
         }
 
-        (Method::Get, "/api/safety/rules") => {
-            (200, json!([
+        (Method::Get, "/api/safety/rules") => (
+            200,
+            json!([
                 {
                     "ruleId": "WIN-SYS-ROOT",
                     "name": "Windows OS & System32 Protected Tree",
@@ -966,23 +1170,34 @@ fn handle_request(mut request: Request, state: Arc<AppState>) {
                     "description": "Revalidates NTFS file ID, volume serial, and size immediately prior to execution to stop symlink races",
                     "isEnabled": true
                 }
-            ]))
-        }
+            ]),
+        ),
 
         (Method::Post, "/api/cleanup/plan") => {
             let mut body_str = String::new();
             if let Err(e) = request.as_reader().read_to_string(&mut body_str) {
-                (400, json!({ "error": format!("Failed to read request body: {}", e) }))
+                (
+                    400,
+                    json!({ "error": format!("Failed to read request body: {}", e) }),
+                )
             } else {
                 match serde_json::from_str::<CreatePlanRequest>(&body_str) {
                     Ok(req) => match state.db.get_connection() {
-                        Ok(conn) => match crate::cleanup::CleanupPlanner::create_plan(&req, &conn) {
-                            Ok(plan) => (200, json!(plan)),
-                            Err(e) => (500, json!({ "error": format!("Plan generation failed: {}", e) })),
-                        },
+                        Ok(conn) => {
+                            match crate::cleanup::CleanupPlanner::create_plan(&req, &conn) {
+                                Ok(plan) => (200, json!(plan)),
+                                Err(e) => (
+                                    500,
+                                    json!({ "error": format!("Plan generation failed: {}", e) }),
+                                ),
+                            }
+                        }
                         Err(e) => (500, json!({ "error": format!("Database error: {}", e) })),
                     },
-                    Err(e) => (400, json!({ "error": format!("Invalid JSON request: {}", e) })),
+                    Err(e) => (
+                        400,
+                        json!({ "error": format!("Invalid JSON request: {}", e) }),
+                    ),
                 }
             }
         }
@@ -990,17 +1205,28 @@ fn handle_request(mut request: Request, state: Arc<AppState>) {
         (Method::Post, "/api/cleanup/dry-run") => {
             let mut body_str = String::new();
             if let Err(e) = request.as_reader().read_to_string(&mut body_str) {
-                (400, json!({ "error": format!("Failed to read request body: {}", e) }))
+                (
+                    400,
+                    json!({ "error": format!("Failed to read request body: {}", e) }),
+                )
             } else {
                 match serde_json::from_str::<DryRunRequest>(&body_str) {
                     Ok(req) => match state.db.get_connection() {
-                        Ok(conn) => match crate::cleanup::DryRunEngine::execute_dry_run(&req.plan_id, &conn) {
-                            Ok(resp) => (200, json!(resp)),
-                            Err(e) => (500, json!({ "error": format!("Dry run failed: {}", e) })),
-                        },
+                        Ok(conn) => {
+                            match crate::cleanup::DryRunEngine::execute_dry_run(&req.plan_id, &conn)
+                            {
+                                Ok(resp) => (200, json!(resp)),
+                                Err(e) => {
+                                    (500, json!({ "error": format!("Dry run failed: {}", e) }))
+                                }
+                            }
+                        }
                         Err(e) => (500, json!({ "error": format!("Database error: {}", e) })),
                     },
-                    Err(e) => (400, json!({ "error": format!("Invalid JSON request: {}", e) })),
+                    Err(e) => (
+                        400,
+                        json!({ "error": format!("Invalid JSON request: {}", e) }),
+                    ),
                 }
             }
         }
@@ -1008,7 +1234,10 @@ fn handle_request(mut request: Request, state: Arc<AppState>) {
         (Method::Post, "/api/cleanup/execute") => {
             let mut body_str = String::new();
             if let Err(e) = request.as_reader().read_to_string(&mut body_str) {
-                (400, json!({ "error": format!("Failed to read request body: {}", e) }))
+                (
+                    400,
+                    json!({ "error": format!("Failed to read request body: {}", e) }),
+                )
             } else {
                 match serde_json::from_str::<ExecutePlanRequest>(&body_str) {
                     Ok(req) => match state.db.get_connection() {
@@ -1019,29 +1248,39 @@ fn handle_request(mut request: Request, state: Arc<AppState>) {
                             &conn,
                         ) {
                             Ok(resp) => (200, json!(resp)),
-                            Err(e) => (500, json!({ "error": format!("Plan execution failed: {}", e) })),
+                            Err(e) => (
+                                500,
+                                json!({ "error": format!("Plan execution failed: {}", e) }),
+                            ),
                         },
                         Err(e) => (500, json!({ "error": format!("Database error: {}", e) })),
                     },
-                    Err(e) => (400, json!({ "error": format!("Invalid JSON request: {}", e) })),
+                    Err(e) => (
+                        400,
+                        json!({ "error": format!("Invalid JSON request: {}", e) }),
+                    ),
                 }
             }
         }
 
-        (Method::Get, "/api/quarantine/records") => {
-            match state.db.get_connection() {
-                Ok(conn) => match state.quarantine.list_all(&conn) {
-                    Ok(records) => (200, json!(records)),
-                    Err(e) => (500, json!({ "error": format!("Failed to list quarantine vault: {}", e) })),
-                },
-                Err(e) => (500, json!({ "error": format!("Database error: {}", e) })),
-            }
-        }
+        (Method::Get, "/api/quarantine/records") => match state.db.get_connection() {
+            Ok(conn) => match state.quarantine.list_all(&conn) {
+                Ok(records) => (200, json!(records)),
+                Err(e) => (
+                    500,
+                    json!({ "error": format!("Failed to list quarantine vault: {}", e) }),
+                ),
+            },
+            Err(e) => (500, json!({ "error": format!("Database error: {}", e) })),
+        },
 
         (Method::Post, "/api/quarantine/restore") => {
             let mut body_str = String::new();
             if let Err(e) = request.as_reader().read_to_string(&mut body_str) {
-                (400, json!({ "error": format!("Failed to read request body: {}", e) }))
+                (
+                    400,
+                    json!({ "error": format!("Failed to read request body: {}", e) }),
+                )
             } else {
                 match serde_json::from_str::<RestoreRequest>(&body_str) {
                     Ok(req) => match state.db.get_connection() {
@@ -1061,15 +1300,21 @@ fn handle_request(mut request: Request, state: Arc<AppState>) {
                                 results.push(res);
                             }
 
-                            (200, json!(RestoreResponse {
-                                results,
-                                total_restored: restored,
-                                total_failed: failed,
-                            }))
+                            (
+                                200,
+                                json!(RestoreResponse {
+                                    results,
+                                    total_restored: restored,
+                                    total_failed: failed,
+                                }),
+                            )
                         }
                         Err(e) => (500, json!({ "error": format!("Database error: {}", e) })),
                     },
-                    Err(e) => (400, json!({ "error": format!("Invalid JSON request: {}", e) })),
+                    Err(e) => (
+                        400,
+                        json!({ "error": format!("Invalid JSON request: {}", e) }),
+                    ),
                 }
             }
         }
@@ -1077,7 +1322,10 @@ fn handle_request(mut request: Request, state: Arc<AppState>) {
         (Method::Post, "/api/quarantine/purge") => {
             let mut body_str = String::new();
             if let Err(e) = request.as_reader().read_to_string(&mut body_str) {
-                (400, json!({ "error": format!("Failed to read request body: {}", e) }))
+                (
+                    400,
+                    json!({ "error": format!("Failed to read request body: {}", e) }),
+                )
             } else {
                 match serde_json::from_str::<PurgeQuarantineRequest>(&body_str) {
                     Ok(req) => match state.db.get_connection() {
@@ -1092,14 +1340,20 @@ fn handle_request(mut request: Request, state: Arc<AppState>) {
                                 }
                             }
 
-                            (200, json!(PurgeResponse {
-                                purged_count: count,
-                                bytes_permanently_freed: freed_bytes,
-                            }))
+                            (
+                                200,
+                                json!(PurgeResponse {
+                                    purged_count: count,
+                                    bytes_permanently_freed: freed_bytes,
+                                }),
+                            )
                         }
                         Err(e) => (500, json!({ "error": format!("Database error: {}", e) })),
                     },
-                    Err(e) => (400, json!({ "error": format!("Invalid JSON request: {}", e) })),
+                    Err(e) => (
+                        400,
+                        json!({ "error": format!("Invalid JSON request: {}", e) }),
+                    ),
                 }
             }
         }
@@ -1107,7 +1361,10 @@ fn handle_request(mut request: Request, state: Arc<AppState>) {
         (Method::Post, "/api/copilot/query") => {
             let mut body_str = String::new();
             if let Err(e) = request.as_reader().read_to_string(&mut body_str) {
-                (400, json!({ "error": format!("Failed to read request body: {}", e) }))
+                (
+                    400,
+                    json!({ "error": format!("Failed to read request body: {}", e) }),
+                )
             } else {
                 match serde_json::from_str::<CopilotQueryRequest>(&body_str) {
                     Ok(req) => match state.db.get_connection() {
@@ -1117,7 +1374,10 @@ fn handle_request(mut request: Request, state: Arc<AppState>) {
                         }
                         Err(e) => (500, json!({ "error": format!("Database error: {}", e) })),
                     },
-                    Err(e) => (400, json!({ "error": format!("Invalid JSON request: {}", e) })),
+                    Err(e) => (
+                        400,
+                        json!({ "error": format!("Invalid JSON request: {}", e) }),
+                    ),
                 }
             }
         }
@@ -1134,17 +1394,27 @@ fn handle_request(mut request: Request, state: Arc<AppState>) {
         (Method::Post, "/api/copilot/tool") => {
             let mut body_str = String::new();
             if let Err(e) = request.as_reader().read_to_string(&mut body_str) {
-                (400, json!({ "error": format!("Failed to read request body: {}", e) }))
+                (
+                    400,
+                    json!({ "error": format!("Failed to read request body: {}", e) }),
+                )
             } else {
                 match serde_json::from_str::<ExecuteToolRequest>(&body_str) {
                     Ok(req) => match state.db.get_connection() {
                         Ok(conn) => {
-                            let resp = crate::copilot::CopilotToolRunner::execute(req.tool, &req.arguments, &conn);
+                            let resp = crate::copilot::CopilotToolRunner::execute(
+                                req.tool,
+                                &req.arguments,
+                                &conn,
+                            );
                             (200, json!(resp))
                         }
                         Err(e) => (500, json!({ "error": format!("Database error: {}", e) })),
                     },
-                    Err(e) => (400, json!({ "error": format!("Invalid JSON request: {}", e) })),
+                    Err(e) => (
+                        400,
+                        json!({ "error": format!("Invalid JSON request: {}", e) }),
+                    ),
                 }
             }
         }
@@ -1152,21 +1422,24 @@ fn handle_request(mut request: Request, state: Arc<AppState>) {
         // ==========================================
         // Phase 7: Automation & Developer Routes
         // ==========================================
-
-        (Method::Get, "/api/automation/rules") => {
-            match state.db.get_connection() {
-                Ok(conn) => match Database::list_automation_rules(&conn) {
-                    Ok(rules) => (200, json!(rules)),
-                    Err(e) => (500, json!({ "error": format!("Failed to list automation rules: {}", e) })),
-                },
-                Err(e) => (500, json!({ "error": format!("Database error: {}", e) })),
-            }
-        }
+        (Method::Get, "/api/automation/rules") => match state.db.get_connection() {
+            Ok(conn) => match Database::list_automation_rules(&conn) {
+                Ok(rules) => (200, json!(rules)),
+                Err(e) => (
+                    500,
+                    json!({ "error": format!("Failed to list automation rules: {}", e) }),
+                ),
+            },
+            Err(e) => (500, json!({ "error": format!("Database error: {}", e) })),
+        },
 
         (Method::Post, "/api/automation/rules") => {
             let mut body_str = String::new();
             if let Err(e) = request.as_reader().read_to_string(&mut body_str) {
-                (400, json!({ "error": format!("Failed to read request body: {}", e) }))
+                (
+                    400,
+                    json!({ "error": format!("Failed to read request body: {}", e) }),
+                )
             } else {
                 match serde_json::from_str::<CreateAutomationRuleRequest>(&body_str) {
                     Ok(req) => match state.db.get_connection() {
@@ -1187,8 +1460,12 @@ fn handle_request(mut request: Request, state: Arc<AppState>) {
                                 actions: req.actions,
                                 scope_paths: req.scope_paths,
                                 exclusion_paths: req.exclusion_paths.unwrap_or_default(),
-                                schedule_expression: req.schedule_expression.unwrap_or_else(|| "Manual / On Demand".to_string()),
-                                requires_explicit_approval: req.requires_explicit_approval.unwrap_or(true),
+                                schedule_expression: req
+                                    .schedule_expression
+                                    .unwrap_or_else(|| "Manual / On Demand".to_string()),
+                                requires_explicit_approval: req
+                                    .requires_explicit_approval
+                                    .unwrap_or(true),
                                 dry_run_mode: req.dry_run_mode.unwrap_or(true),
                                 retry_policy: req.retry_policy.unwrap_or_default(),
                                 execution_limits: req.execution_limits.unwrap_or_default(),
@@ -1200,33 +1477,40 @@ fn handle_request(mut request: Request, state: Arc<AppState>) {
 
                             match Database::insert_automation_rule(&conn, &rule) {
                                 Ok(_) => (201, json!(rule)),
-                                Err(e) => (500, json!({ "error": format!("Failed to insert rule: {}", e) })),
+                                Err(e) => (
+                                    500,
+                                    json!({ "error": format!("Failed to insert rule: {}", e) }),
+                                ),
                             }
                         }
                         Err(e) => (500, json!({ "error": format!("Database error: {}", e) })),
                     },
-                    Err(e) => (400, json!({ "error": format!("Invalid JSON request: {}", e) })),
+                    Err(e) => (
+                        400,
+                        json!({ "error": format!("Invalid JSON request: {}", e) }),
+                    ),
                 }
             }
         }
 
-        (Method::Get, "/api/automation/history") => {
-            match state.db.get_connection() {
-                Ok(conn) => {
-                    let rule_id = query_params.get("ruleId").map(|s| s.as_str());
-                    let limit = query_params
-                        .get("limit")
-                        .and_then(|s| s.parse::<u32>().ok())
-                        .unwrap_or(50);
+        (Method::Get, "/api/automation/history") => match state.db.get_connection() {
+            Ok(conn) => {
+                let rule_id = query_params.get("ruleId").map(|s| s.as_str());
+                let limit = query_params
+                    .get("limit")
+                    .and_then(|s| s.parse::<u32>().ok())
+                    .unwrap_or(50);
 
-                    match Database::list_automation_history(&conn, rule_id, limit) {
-                        Ok(history) => (200, json!(history)),
-                        Err(e) => (500, json!({ "error": format!("Failed to retrieve history: {}", e) })),
-                    }
+                match Database::list_automation_history(&conn, rule_id, limit) {
+                    Ok(history) => (200, json!(history)),
+                    Err(e) => (
+                        500,
+                        json!({ "error": format!("Failed to retrieve history: {}", e) }),
+                    ),
                 }
-                Err(e) => (500, json!({ "error": format!("Database error: {}", e) })),
             }
-        }
+            Err(e) => (500, json!({ "error": format!("Database error: {}", e) })),
+        },
 
         (Method::Get, "/api/automation/scheduler/status") => {
             let status = state.scheduler.get_status();
@@ -1240,20 +1524,28 @@ fn handle_request(mut request: Request, state: Arc<AppState>) {
                 std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."))
             };
 
-            let projects = crate::developer::DeveloperWorkspaceScanner::scan_workspace(&scan_root, 5);
+            let projects =
+                crate::developer::DeveloperWorkspaceScanner::scan_workspace(&scan_root, 5);
             (200, json!(projects))
         }
 
         (Method::Post, "/api/developer/clean") => {
             let mut body_str = String::new();
             if let Err(e) = request.as_reader().read_to_string(&mut body_str) {
-                (400, json!({ "error": format!("Failed to read request body: {}", e) }))
+                (
+                    400,
+                    json!({ "error": format!("Failed to read request body: {}", e) }),
+                )
             } else {
                 match serde_json::from_str::<CleanProjectArtifactsRequest>(&body_str) {
                     Ok(req) => match state.db.get_connection() {
                         Ok(conn) => {
-                            let scan_root = std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
-                            let all_projects = crate::developer::DeveloperWorkspaceScanner::scan_workspace(&scan_root, 5);
+                            let scan_root =
+                                std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
+                            let all_projects =
+                                crate::developer::DeveloperWorkspaceScanner::scan_workspace(
+                                    &scan_root, 5,
+                                );
 
                             let selected: Vec<_> = all_projects
                                 .into_iter()
@@ -1291,44 +1583,63 @@ fn handle_request(mut request: Request, state: Arc<AppState>) {
                                     };
                                     (200, json!(resp))
                                 }
-                                Err(e) => (500, json!({ "error": format!("Failed to assemble plan: {}", e) })),
+                                Err(e) => (
+                                    500,
+                                    json!({ "error": format!("Failed to assemble plan: {}", e) }),
+                                ),
                             }
                         }
                         Err(e) => (500, json!({ "error": format!("Database error: {}", e) })),
                     },
-                    Err(e) => (400, json!({ "error": format!("Invalid JSON request: {}", e) })),
+                    Err(e) => (
+                        400,
+                        json!({ "error": format!("Invalid JSON request: {}", e) }),
+                    ),
                 }
             }
         }
 
         // Dynamic Parameterized Automation Routes
-        _ if path.starts_with("/api/automation/rules/") && path.ends_with("/toggle") && method == Method::Post => {
+        _ if path.starts_with("/api/automation/rules/")
+            && path.ends_with("/toggle")
+            && method == Method::Post =>
+        {
             let prefix = "/api/automation/rules/";
             let suffix = "/toggle";
             let rule_id = &path[prefix.len()..path.len() - suffix.len()];
 
             let mut body_str = String::new();
             let _ = request.as_reader().read_to_string(&mut body_str);
-            let val: serde_json::Value = serde_json::from_str(&body_str).unwrap_or(json!({ "enabled": true }));
+            let val: serde_json::Value =
+                serde_json::from_str(&body_str).unwrap_or(json!({ "enabled": true }));
             let enabled = val.get("enabled").and_then(|v| v.as_bool()).unwrap_or(true);
 
             match state.db.get_connection() {
                 Ok(conn) => match Database::toggle_automation_rule(&conn, rule_id, enabled) {
-                    Ok(_) => (200, json!({ "success": true, "ruleId": rule_id, "enabled": enabled })),
+                    Ok(_) => (
+                        200,
+                        json!({ "success": true, "ruleId": rule_id, "enabled": enabled }),
+                    ),
                     Err(e) => (500, json!({ "error": format!("Toggle failed: {}", e) })),
                 },
                 Err(e) => (500, json!({ "error": format!("Database error: {}", e) })),
             }
         }
 
-        _ if path.starts_with("/api/automation/rules/") && path.ends_with("/run") && method == Method::Post => {
+        _ if path.starts_with("/api/automation/rules/")
+            && path.ends_with("/run")
+            && method == Method::Post =>
+        {
             let prefix = "/api/automation/rules/";
             let suffix = "/run";
             let rule_id = &path[prefix.len()..path.len() - suffix.len()];
 
             let mut body_str = String::new();
             let _ = request.as_reader().read_to_string(&mut body_str);
-            let req: TriggerRuleRequest = serde_json::from_str(&body_str).unwrap_or(TriggerRuleRequest { dry_run_override: None });
+            let req: TriggerRuleRequest =
+                serde_json::from_str(&body_str).unwrap_or(TriggerRuleRequest {
+                    dry_run_override: None,
+                });
 
             match state.db.get_connection() {
                 Ok(conn) => match Database::get_automation_rule(&conn, rule_id) {
@@ -1342,7 +1653,10 @@ fn handle_request(mut request: Request, state: Arc<AppState>) {
                         );
                         (200, json!(hist))
                     }
-                    Ok(None) => (404, json!({ "error": format!("Rule not found: {}", rule_id) })),
+                    Ok(None) => (
+                        404,
+                        json!({ "error": format!("Rule not found: {}", rule_id) }),
+                    ),
                     Err(e) => (500, json!({ "error": format!("Database error: {}", e) })),
                 },
                 Err(e) => (500, json!({ "error": format!("Database error: {}", e) })),
@@ -1369,7 +1683,13 @@ fn handle_request(mut request: Request, state: Arc<AppState>) {
     let resp = Response::from_data(body_bytes)
         .with_status_code(StatusCode(status_code))
         .with_header(Header::from_bytes(&b"Content-Type"[..], &b"application/json"[..]).unwrap())
-        .with_header(Header::from_bytes(b"Access-Control-Allow-Origin".as_slice(), allowed_origin.as_bytes()).unwrap());
+        .with_header(
+            Header::from_bytes(
+                b"Access-Control-Allow-Origin".as_slice(),
+                allowed_origin.as_bytes(),
+            )
+            .unwrap(),
+        );
 
     let _ = request.respond(resp);
 }

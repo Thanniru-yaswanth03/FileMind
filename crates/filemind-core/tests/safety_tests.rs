@@ -1,10 +1,8 @@
+use filemind_core::db::Database;
+use filemind_core::models::{AllowedOperation, SafetyAuditRecordDto, SafetyClassification};
 use filemind_core::safety::{
     capture_identity_snapshot, revalidate_handle, AuditLogger, SafetyGuardian,
 };
-use filemind_core::models::{
-    AllowedOperation, SafetyAuditRecordDto, SafetyClassification,
-};
-use filemind_core::db::Database;
 use std::fs::{self, File};
 use std::io::Write;
 use std::path::Path;
@@ -58,7 +56,10 @@ fn test_path_traversal_attempts_strictly_blocked() {
             path_str
         );
         assert!(!assessment.is_permitted);
-        assert!(assessment.rule_matches.iter().any(|r| r.contains("TRAVERSAL")));
+        assert!(assessment
+            .rule_matches
+            .iter()
+            .any(|r| r.contains("TRAVERSAL")));
     }
 }
 
@@ -81,7 +82,10 @@ fn test_wsl_distributions_and_virtual_disks_blocked() {
         );
         assert_eq!(assessment.allowed_operation, AllowedOperation::Blocked);
         assert!(!assessment.is_permitted);
-        assert!(assessment.rule_matches.iter().any(|r| r.starts_with("WSL-")));
+        assert!(assessment
+            .rule_matches
+            .iter()
+            .any(|r| r.starts_with("WSL-")));
     }
 }
 
@@ -133,7 +137,10 @@ fn test_developer_source_files_require_manual_review() {
             assessment.allowed_operation,
             AllowedOperation::RequiresExplicitUserConfirmation
         );
-        assert!(!assessment.is_permitted, "Source files must not be deleted automatically");
+        assert!(
+            !assessment.is_permitted,
+            "Source files must not be deleted automatically"
+        );
     }
 }
 
@@ -143,13 +150,22 @@ fn test_regenerable_build_directory_with_manifest_and_lockfile_permitted() {
     let root = tmp.path();
 
     // Create Cargo.toml and Cargo.lock
-    File::create(root.join("Cargo.toml")).unwrap().write_all(b"[package]\nname = \"demo\"\nversion = \"0.1.0\"\n").unwrap();
-    File::create(root.join("Cargo.lock")).unwrap().write_all(b"# lockfile\n").unwrap();
+    File::create(root.join("Cargo.toml"))
+        .unwrap()
+        .write_all(b"[package]\nname = \"demo\"\nversion = \"0.1.0\"\n")
+        .unwrap();
+    File::create(root.join("Cargo.lock"))
+        .unwrap()
+        .write_all(b"# lockfile\n")
+        .unwrap();
 
     // Create target directory with some build artifacts
     let target_dir = root.join("target");
     fs::create_dir_all(&target_dir).unwrap();
-    File::create(target_dir.join("demo.exe")).unwrap().write_all(b"binary data").unwrap();
+    File::create(target_dir.join("demo.exe"))
+        .unwrap()
+        .write_all(b"binary data")
+        .unwrap();
 
     let assessment = SafetyGuardian::evaluate_target(&target_dir, "recycle");
     assert_eq!(
@@ -168,7 +184,10 @@ fn test_regenerable_build_directory_missing_lockfile_demoted_to_high_risk() {
     let root = tmp.path();
 
     // Create Cargo.toml WITHOUT Cargo.lock
-    File::create(root.join("Cargo.toml")).unwrap().write_all(b"[package]\nname = \"demo\"\nversion = \"0.1.0\"\n").unwrap();
+    File::create(root.join("Cargo.toml"))
+        .unwrap()
+        .write_all(b"[package]\nname = \"demo\"\nversion = \"0.1.0\"\n")
+        .unwrap();
 
     // Create target directory
     let target_dir = root.join("target");
@@ -189,13 +208,22 @@ fn test_build_directory_containing_secret_file_blocked() {
     let root = tmp.path();
 
     // Create Cargo.toml and Cargo.lock
-    File::create(root.join("Cargo.toml")).unwrap().write_all(b"[package]\nname = \"demo\"\n").unwrap();
-    File::create(root.join("Cargo.lock")).unwrap().write_all(b"# lock\n").unwrap();
+    File::create(root.join("Cargo.toml"))
+        .unwrap()
+        .write_all(b"[package]\nname = \"demo\"\n")
+        .unwrap();
+    File::create(root.join("Cargo.lock"))
+        .unwrap()
+        .write_all(b"# lock\n")
+        .unwrap();
 
     // Create target directory containing a misplaced .env file
     let target_dir = root.join("target");
     fs::create_dir_all(&target_dir).unwrap();
-    File::create(target_dir.join(".env")).unwrap().write_all(b"API_SECRET=12345\n").unwrap();
+    File::create(target_dir.join(".env"))
+        .unwrap()
+        .write_all(b"API_SECRET=12345\n")
+        .unwrap();
 
     let assessment = SafetyGuardian::evaluate_target(&target_dir, "recycle");
     assert_eq!(
@@ -212,7 +240,10 @@ fn test_toctou_handle_identity_revalidation_detects_mutation() {
     let file_path = tmp.path().join("toctou_test.txt");
 
     // Write initial file
-    File::create(&file_path).unwrap().write_all(b"original content").unwrap();
+    File::create(&file_path)
+        .unwrap()
+        .write_all(b"original content")
+        .unwrap();
 
     // Capture frozen snapshot
     let snapshot = capture_identity_snapshot(&file_path).unwrap();
@@ -221,11 +252,17 @@ fn test_toctou_handle_identity_revalidation_detects_mutation() {
     assert!(revalidate_handle(&snapshot).is_ok());
 
     // Mutate file size and timestamp
-    File::create(&file_path).unwrap().write_all(b"tampered content has changed!").unwrap();
+    File::create(&file_path)
+        .unwrap()
+        .write_all(b"tampered content has changed!")
+        .unwrap();
 
     // TOCTOU revalidation must catch this modification
     let reval_result = revalidate_handle(&snapshot);
-    assert!(reval_result.is_err(), "TOCTOU must fail when file content/size changes");
+    assert!(
+        reval_result.is_err(),
+        "TOCTOU must fail when file content/size changes"
+    );
 }
 
 #[test]
@@ -254,7 +291,10 @@ fn test_safety_audit_trail_recorded_in_sqlite() {
     let recent = AuditLogger::fetch_recent(&conn, 10).unwrap();
     assert_eq!(recent.len(), 1);
     assert_eq!(recent[0].target_path, r"C:\test\target");
-    assert_eq!(recent[0].classification, SafetyClassification::LowRiskCandidate);
+    assert_eq!(
+        recent[0].classification,
+        SafetyClassification::LowRiskCandidate
+    );
     assert!(recent[0].is_permitted);
     assert!(recent[0].toctou_verified);
 }

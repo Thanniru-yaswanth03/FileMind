@@ -1,5 +1,5 @@
-use std::path::Path;
 use crate::models::{FileCategory, RiskTier};
+use std::path::Path;
 
 /// Categorizes a file based on its extension and directory context.
 pub fn categorize_file(path: &Path, extension: &str) -> FileCategory {
@@ -21,23 +21,21 @@ pub fn categorize_file(path: &Path, extension: &str) -> FileCategory {
 
     match ext {
         // Code and developer assets
-        "rs" | "ts" | "tsx" | "js" | "jsx" | "py" | "c" | "cpp" | "h" | "hpp" | "cs"
-        | "go" | "java" | "html" | "css" | "scss" | "sass" | "less" | "json" | "yaml"
-        | "yml" | "toml" | "md" | "sql" | "sh" | "ps1" | "bat" | "cmd" | "xml" | "proto"
-        | "graphql" | "vue" | "svelte" | "dart" | "kt" | "swift" | "rb" | "php" => {
-            FileCategory::Code
-        }
+        "rs" | "ts" | "tsx" | "js" | "jsx" | "py" | "c" | "cpp" | "h" | "hpp" | "cs" | "go"
+        | "java" | "html" | "css" | "scss" | "sass" | "less" | "json" | "yaml" | "yml" | "toml"
+        | "md" | "sql" | "sh" | "ps1" | "bat" | "cmd" | "xml" | "proto" | "graphql" | "vue"
+        | "svelte" | "dart" | "kt" | "swift" | "rb" | "php" => FileCategory::Code,
 
         // Media (images, videos, audio)
         "png" | "jpg" | "jpeg" | "gif" | "bmp" | "webp" | "svg" | "ico" | "tiff" | "tif"
-        | "psd" | "ai" | "raw" | "cr2" | "nef" | "mp4" | "mkv" | "avi" | "mov" | "wmv"
-        | "flv" | "webm" | "m4v" | "mp3" | "wav" | "flac" | "aac" | "ogg" | "m4a" | "wma" => {
+        | "psd" | "ai" | "raw" | "cr2" | "nef" | "mp4" | "mkv" | "avi" | "mov" | "wmv" | "flv"
+        | "webm" | "m4v" | "mp3" | "wav" | "flac" | "aac" | "ogg" | "m4a" | "wma" => {
             FileCategory::Media
         }
 
         // Compressed archives
-        "zip" | "tar" | "gz" | "7z" | "rar" | "bz2" | "xz" | "iso" | "tgz" | "zst"
-        | "cab" | "dmg" | "wim" | "pkg" => FileCategory::Archives,
+        "zip" | "tar" | "gz" | "7z" | "rar" | "bz2" | "xz" | "iso" | "tgz" | "zst" | "cab"
+        | "dmg" | "wim" | "pkg" => FileCategory::Archives,
 
         // Office & text documents
         "pdf" | "docx" | "doc" | "xlsx" | "xls" | "pptx" | "ppt" | "txt" | "csv" | "tsv"
@@ -51,8 +49,8 @@ pub fn categorize_file(path: &Path, extension: &str) -> FileCategory {
         }
 
         // Disposable and cache extensions
-        "tmp" | "temp" | "log" | "cache" | "bak" | "old" | "dmp" | "swp" | "lock"
-        | "chk" | "part" | "crdownload" => FileCategory::Caches,
+        "tmp" | "temp" | "log" | "cache" | "bak" | "old" | "dmp" | "swp" | "lock" | "chk"
+        | "part" | "crdownload" => FileCategory::Caches,
 
         _ => FileCategory::Other,
     }
@@ -60,7 +58,11 @@ pub fn categorize_file(path: &Path, extension: &str) -> FileCategory {
 
 /// Evaluates default safety risk tier and rationale for a file.
 /// Enforces the architectural invariant: "Unknown is Unsafe".
-pub fn evaluate_risk_tier(path: &Path, category: FileCategory, is_system: bool) -> (RiskTier, String) {
+pub fn evaluate_risk_tier(
+    path: &Path,
+    category: FileCategory,
+    is_system: bool,
+) -> (RiskTier, String) {
     let path_str = path.to_string_lossy().to_lowercase();
 
     // Danger: Operating system core directories or system files
@@ -94,15 +96,20 @@ pub fn evaluate_risk_tier(path: &Path, category: FileCategory, is_system: bool) 
     if category == FileCategory::Executables || category == FileCategory::Archives {
         return (
             RiskTier::Caution,
-            "Binary or Archive: Requires manual review to avoid deleting installed software".to_string(),
+            "Binary or Archive: Requires manual review to avoid deleting installed software"
+                .to_string(),
         );
     }
 
     // High Risk (Tier 3): Source code and personal documents
-    if category == FileCategory::Code || category == FileCategory::Documents || category == FileCategory::Media {
+    if category == FileCategory::Code
+        || category == FileCategory::Documents
+        || category == FileCategory::Media
+    {
         return (
             RiskTier::High,
-            "User Document or Code: Critical user asset. Never scheduled for auto-cleanup".to_string(),
+            "User Document or Code: Critical user asset. Never scheduled for auto-cleanup"
+                .to_string(),
         );
     }
 
@@ -112,4 +119,3 @@ pub fn evaluate_risk_tier(path: &Path, category: FileCategory, is_system: bool) 
         "Unknown File Type: Requires explicit confirmation before any cleanup".to_string(),
     )
 }
-

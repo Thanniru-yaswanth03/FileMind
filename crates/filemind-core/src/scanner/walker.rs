@@ -6,9 +6,7 @@ use std::sync::Arc;
 use crate::adapter::metadata::{epoch_ms_to_iso, inspect_file};
 use crate::adapter::path::{normalize_path, to_long_path};
 use crate::adapter::volume::query_volume_info;
-use crate::models::{
-    FileAttributesDto, FileItemDto, ScanProgressState,
-};
+use crate::models::{FileAttributesDto, FileItemDto, ScanProgressState};
 use crate::scanner::category::{categorize_file, evaluate_risk_tier};
 use crate::scanner::error::ScanError;
 use crate::scanner::filter::{ReparsePointPolicy, ScanFilter};
@@ -49,8 +47,8 @@ pub fn execute_scan(
     session_id: Option<String>,
 ) -> ScanResult {
     let normalized_root = normalize_path(root_path);
-    let vol_info = query_volume_info(root_path).unwrap_or_else(|_| {
-        crate::adapter::volume::VolumeInfo {
+    let vol_info =
+        query_volume_info(root_path).unwrap_or_else(|_| crate::adapter::volume::VolumeInfo {
             root_path: normalized_root.clone(),
             drive_letter: "C".to_string(),
             volume_label: "Local Disk".to_string(),
@@ -61,8 +59,7 @@ pub fn execute_scan(
             available_bytes: 0,
             is_system_drive: false,
             volume_serial: 0,
-        }
-    });
+        });
 
     let cluster_size = vol_info.cluster_size_bytes;
     let progress = Arc::new(ProgressTracker::new(session_id.clone()));
@@ -191,7 +188,10 @@ pub fn execute_scan(
                         if !filter.mark_visited_or_loop(v_serial, parsed_id) {
                             collected_errors.push(ScanError::new_reparse_policy(
                                 &entry_path,
-                                format!("Circular directory junction loop detected and skipped: '{}'", norm_entry_path),
+                                format!(
+                                    "Circular directory junction loop detected and skipped: '{}'",
+                                    norm_entry_path
+                                ),
                             ));
                             continue;
                         }
@@ -199,8 +199,9 @@ pub fn execute_scan(
                 }
 
                 // Register directory in directory map
-                dir_map.entry(norm_entry_path.clone()).or_insert_with(|| {
-                    InternalDirectoryRecord {
+                dir_map
+                    .entry(norm_entry_path.clone())
+                    .or_insert_with(|| InternalDirectoryRecord {
                         path: norm_entry_path.clone(),
                         parent_path: norm_current_dir.clone(),
                         depth: depth + 1,
@@ -210,8 +211,7 @@ pub fn execute_scan(
                         file_count: 0,
                         dir_count: 0,
                         mtime_epoch_ms: meta.mtime_epoch_ms,
-                    }
-                });
+                    });
 
                 // Enqueue subdirectory for scanning
                 dir_queue.push((entry_path, depth + 1));
@@ -223,14 +223,19 @@ pub fn execute_scan(
                     .unwrap_or_default();
 
                 let category = categorize_file(&entry_path, &ext);
-                let (risk_tier, rationale) = evaluate_risk_tier(&entry_path, category, meta.is_system);
+                let (risk_tier, rationale) =
+                    evaluate_risk_tier(&entry_path, category, meta.is_system);
 
                 let file_dto = FileItemDto {
                     id: format!("file_{}_{}", meta.ctime_epoch_ms, collected_files.len() + 1),
                     name: filename,
                     path: norm_entry_path.clone(),
                     parent_path: norm_current_dir.clone(),
-                    extension: if ext.is_empty() { String::new() } else { format!(".{}", ext.to_lowercase()) },
+                    extension: if ext.is_empty() {
+                        String::new()
+                    } else {
+                        format!(".{}", ext.to_lowercase())
+                    },
                     size_bytes: meta.logical_size_bytes,
                     physical_size_bytes: meta.physical_size_bytes,
                     category,

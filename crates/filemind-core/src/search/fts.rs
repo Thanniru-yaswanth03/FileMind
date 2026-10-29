@@ -3,11 +3,11 @@ use std::path::PathBuf;
 use std::time::{Instant, SystemTime};
 
 use crate::adapter::path::normalize_path;
-use crate::search::extractor::{DocumentExtractor, ExtractionStatus};
 use crate::models::{
     ContentIndexProgress, ContentIndexStatusResponse, ContentSearchQuery, ContentSearchResponse,
     ContentSearchResultItem,
 };
+use crate::search::extractor::{DocumentExtractor, ExtractionStatus};
 
 pub struct FtsEngine;
 
@@ -60,7 +60,9 @@ impl FtsEngine {
             let mtime: i64 = row.get(5)?;
 
             let full = PathBuf::from(&dir).join(&fname);
-            if DocumentExtractor::is_supported(&full) || crate::search::security::SecretFilter::is_sensitive(&full) {
+            if DocumentExtractor::is_supported(&full)
+                || crate::search::security::SecretFilter::is_sensitive(&full)
+            {
                 candidate_list.push((file_id, dir, fname, ext, size as u64, mtime as u64));
             }
         }
@@ -72,7 +74,9 @@ impl FtsEngine {
             .map(|d| d.as_millis() as i64)
             .unwrap_or(0);
 
-        for (file_id, dir, fname, ext, size_bytes, mtime_ms) in candidate_list.into_iter().take(max_files) {
+        for (file_id, dir, fname, ext, size_bytes, mtime_ms) in
+            candidate_list.into_iter().take(max_files)
+        {
             let full_path = PathBuf::from(&dir).join(&fname);
             let full_norm = normalize_path(&full_path);
             progress.current_file = fname.clone();
@@ -119,7 +123,10 @@ impl FtsEngine {
                     };
 
                     // Update FTS virtual table
-                    conn.execute("DELETE FROM fts_documents WHERE file_id = ?1", params![file_id])?;
+                    conn.execute(
+                        "DELETE FROM fts_documents WHERE file_id = ?1",
+                        params![file_id],
+                    )?;
                     conn.execute(
                         "INSERT INTO fts_documents (file_id, path, filename, extension, content) VALUES (?1, ?2, ?3, ?4, ?5)",
                         params![file_id, full_norm, fname, ext, extraction.text],
@@ -161,7 +168,10 @@ impl FtsEngine {
     }
 
     /// Full-text search with highlight snippets and staleness detection.
-    pub fn search_content(conn: &Connection, query: &ContentSearchQuery) -> Result<ContentSearchResponse> {
+    pub fn search_content(
+        conn: &Connection,
+        query: &ContentSearchQuery,
+    ) -> Result<ContentSearchResponse> {
         let start_time = Instant::now();
         let clean_query = query.query.trim();
 
@@ -225,7 +235,9 @@ impl FtsEngine {
                     .map(|d| d.as_millis() as u64)
                     .unwrap_or(0);
 
-                if current_size != size_bytes as u64 || (current_mtime as i64 - mtime_ms).abs() > 100 {
+                if current_size != size_bytes as u64
+                    || (current_mtime as i64 - mtime_ms).abs() > 100
+                {
                     is_stale = true;
                 }
             } else {
@@ -263,17 +275,21 @@ impl FtsEngine {
             |r| Ok((r.get(0)?, r.get(1)?)),
         ).unwrap_or((0, 0));
 
-        let skipped_sensitive: i64 = conn.query_row(
-            "SELECT COUNT(*) FROM document_content_index WHERE status = 'excluded_sensitive'",
-            [],
-            |r| r.get(0),
-        ).unwrap_or(0);
+        let skipped_sensitive: i64 = conn
+            .query_row(
+                "SELECT COUNT(*) FROM document_content_index WHERE status = 'excluded_sensitive'",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap_or(0);
 
-        let truncated_count: i64 = conn.query_row(
-            "SELECT COUNT(*) FROM document_content_index WHERE status = 'truncated'",
-            [],
-            |r| r.get(0),
-        ).unwrap_or(0);
+        let truncated_count: i64 = conn
+            .query_row(
+                "SELECT COUNT(*) FROM document_content_index WHERE status = 'truncated'",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap_or(0);
 
         Ok(ContentIndexStatusResponse {
             total_indexed_documents: total_indexed as u64,

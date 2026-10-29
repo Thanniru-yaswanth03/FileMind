@@ -1,14 +1,17 @@
-use rusqlite::{params, Connection, Result};
 use crate::models::{SafetyAuditRecordDto, SafetyClassification, TypedEvidenceItem};
+use rusqlite::{params, Connection, Result};
 
 pub struct AuditLogger;
 
 impl AuditLogger {
     /// Inserts a new safety audit entry into SQLite database
     pub fn record_audit(conn: &Connection, record: &SafetyAuditRecordDto) -> Result<i64> {
-        let rule_matches_json = serde_json::to_string(&record.rule_matches).unwrap_or_else(|_| "[]".to_string());
-        let evidence_json = serde_json::to_string(&record.evidence).unwrap_or_else(|_| "[]".to_string());
-        let block_reasons_json = serde_json::to_string(&record.block_reasons).unwrap_or_else(|_| "[]".to_string());
+        let rule_matches_json =
+            serde_json::to_string(&record.rule_matches).unwrap_or_else(|_| "[]".to_string());
+        let evidence_json =
+            serde_json::to_string(&record.evidence).unwrap_or_else(|_| "[]".to_string());
+        let block_reasons_json =
+            serde_json::to_string(&record.block_reasons).unwrap_or_else(|_| "[]".to_string());
         let classification_str = format!("{:?}", record.classification);
 
         conn.execute(
@@ -93,9 +96,12 @@ impl AuditLogger {
                 _ => SafetyClassification::HighRiskOrUnknown,
             };
 
-            let rule_matches: Vec<String> = serde_json::from_str(&rule_matches_raw).unwrap_or_default();
-            let evidence: Vec<TypedEvidenceItem> = serde_json::from_str(&evidence_raw).unwrap_or_default();
-            let block_reasons: Vec<String> = serde_json::from_str(&block_reasons_raw).unwrap_or_default();
+            let rule_matches: Vec<String> =
+                serde_json::from_str(&rule_matches_raw).unwrap_or_default();
+            let evidence: Vec<TypedEvidenceItem> =
+                serde_json::from_str(&evidence_raw).unwrap_or_default();
+            let block_reasons: Vec<String> =
+                serde_json::from_str(&block_reasons_raw).unwrap_or_default();
 
             Ok(SafetyAuditRecordDto {
                 audit_id,
@@ -122,4 +128,3 @@ impl AuditLogger {
         Ok(results)
     }
 }
-

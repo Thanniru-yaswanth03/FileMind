@@ -28,7 +28,11 @@ impl CopilotDispatcher {
         for pattern in &injection_patterns {
             while let Some(pos) = sanitized.to_lowercase().find(pattern) {
                 let end = pos + pattern.len();
-                sanitized = format!("{}[untrusted instruction stripped]{}", &sanitized[..pos], &sanitized[end..]);
+                sanitized = format!(
+                    "{}[untrusted instruction stripped]{}",
+                    &sanitized[..pos],
+                    &sanitized[end..]
+                );
             }
         }
 
@@ -128,7 +132,10 @@ impl CopilotDispatcher {
                 "### Storage Summary\n\n{}\n\n{}",
                 summary_str,
                 if is_stale {
-                    format!("> [!NOTE]\n> {} Click 'Trigger Volume Scan' to refresh index.", stale_reason)
+                    format!(
+                        "> [!NOTE]\n> {} Click 'Trigger Volume Scan' to refresh index.",
+                        stale_reason
+                    )
                 } else {
                     "Data is grounded in your verified local SQLite index.".to_string()
                 }
@@ -188,8 +195,14 @@ impl CopilotDispatcher {
                 for f in files.iter().take(5) {
                     let path = f.get("path").and_then(|v| v.as_str()).unwrap_or("");
                     let fname = f.get("filename").and_then(|v| v.as_str()).unwrap_or("");
-                    let size = f.get("logicalSizeBytes").and_then(|v| v.as_u64()).unwrap_or(0);
-                    let risk = f.get("riskTier").and_then(|v| v.as_str()).unwrap_or("caution");
+                    let size = f
+                        .get("logicalSizeBytes")
+                        .and_then(|v| v.as_u64())
+                        .unwrap_or(0);
+                    let risk = f
+                        .get("riskTier")
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("caution");
 
                     evidence.push(CopilotEvidenceItem {
                         path: path.to_string(),
@@ -228,14 +241,18 @@ impl CopilotDispatcher {
                 for f in files.iter().take(4) {
                     let path = f.get("path").and_then(|v| v.as_str()).unwrap_or("");
                     let fname = f.get("filename").and_then(|v| v.as_str()).unwrap_or("");
-                    let size = f.get("logicalSizeBytes").and_then(|v| v.as_u64()).unwrap_or(0);
+                    let size = f
+                        .get("logicalSizeBytes")
+                        .and_then(|v| v.as_u64())
+                        .unwrap_or(0);
 
                     evidence.push(CopilotEvidenceItem {
                         path: path.to_string(),
                         filename: fname.to_string(),
                         size_bytes: size,
                         risk_tier: "safe".to_string(),
-                        reason: "Disposable package dependency cache (rebuildable via npm/pnpm)".to_string(),
+                        reason: "Disposable package dependency cache (rebuildable via npm/pnpm)"
+                            .to_string(),
                         action_type: "plan_review".to_string(),
                     });
                 }
@@ -272,7 +289,11 @@ impl CopilotDispatcher {
 
             evidence.push(CopilotEvidenceItem {
                 path: target_path.to_string(),
-                filename: target_path.split(['\\', '/']).last().unwrap_or(target_path).to_string(),
+                filename: target_path
+                    .split(['\\', '/'])
+                    .last()
+                    .unwrap_or(target_path)
+                    .to_string(),
                 size_bytes: 0,
                 risk_tier: "danger".to_string(),
                 reason: "Protected system path or kernel component".to_string(),
@@ -287,7 +308,10 @@ impl CopilotDispatcher {
             );
 
             (ans, format!("Safety explanation: {}", data))
-        } else if query_lower.contains("linux") || query_lower.contains("wsl") || query_lower.contains("vhdx") {
+        } else if query_lower.contains("linux")
+            || query_lower.contains("wsl")
+            || query_lower.contains("vhdx")
+        {
             let res = CopilotToolRunner::execute(
                 CopilotToolName::SearchFiles,
                 &json!({ "extension": "vhdx", "limit": 5 }),
@@ -320,7 +344,11 @@ impl CopilotDispatcher {
             );
 
             (ans, "Linux/WSL image findings".to_string())
-        } else if query_lower.contains("free") && (query_lower.contains("10 gb") || query_lower.contains("5 gb") || query_lower.contains("plan")) {
+        } else if query_lower.contains("free")
+            && (query_lower.contains("10 gb")
+                || query_lower.contains("5 gb")
+                || query_lower.contains("plan"))
+        {
             let target_gb: u64 = if query_lower.contains("5 gb") { 5 } else { 10 };
             let target_bytes: u64 = target_gb * 1024 * 1024 * 1024;
 
@@ -333,8 +361,14 @@ impl CopilotDispatcher {
             let data = res.data.clone();
             tool_executions.push(res);
 
-            let plan_id = data.get("planId").and_then(|v| v.as_str()).map(|s| s.to_string());
-            let reclaimable = data.get("totalPhysicalReclaimableBytes").and_then(|v| v.as_u64()).unwrap_or(0);
+            let plan_id = data
+                .get("planId")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string());
+            let reclaimable = data
+                .get("totalPhysicalReclaimableBytes")
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
             let items_count = data.get("itemsCount").and_then(|v| v.as_u64()).unwrap_or(0) as usize;
 
             // Formulate Action Proposal requiring explicit user approval
@@ -361,7 +395,10 @@ impl CopilotDispatcher {
             );
 
             (ans, format!("Cleanup plan data: {}", data))
-        } else if query_lower.contains("reversible") || query_lower.contains("undo") || query_lower.contains("recovery") {
+        } else if query_lower.contains("reversible")
+            || query_lower.contains("undo")
+            || query_lower.contains("recovery")
+        {
             let res = CopilotToolRunner::execute(
                 CopilotToolName::GetOperationHistory,
                 &json!({ "limit": 10 }),
@@ -392,7 +429,10 @@ impl CopilotDispatcher {
                 for f in files.iter().take(5) {
                     let path = f.get("path").and_then(|v| v.as_str()).unwrap_or("");
                     let fname = f.get("filename").and_then(|v| v.as_str()).unwrap_or("");
-                    let size = f.get("logicalSizeBytes").and_then(|v| v.as_u64()).unwrap_or(0);
+                    let size = f
+                        .get("logicalSizeBytes")
+                        .and_then(|v| v.as_u64())
+                        .unwrap_or(0);
 
                     evidence.push(CopilotEvidenceItem {
                         path: path.to_string(),

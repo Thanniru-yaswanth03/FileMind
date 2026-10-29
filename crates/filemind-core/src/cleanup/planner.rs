@@ -7,8 +7,8 @@ use crate::adapter::metadata::{inspect_file, system_time_to_epoch_ms};
 use crate::adapter::path::{is_descendant_of, normalize_path, strip_verbatim_prefix};
 use crate::duplicate::pipeline::DuplicatePipeline;
 use crate::models::{
-    CandidateSource, CleanupPlanDto, CleanupPlanItemDto, CreatePlanRequest,
-    PlanItemOperation, PlanItemState, PlanStatus, RiskTier, SafetyClassification,
+    CandidateSource, CleanupPlanDto, CleanupPlanItemDto, CreatePlanRequest, PlanItemOperation,
+    PlanItemState, PlanStatus, RiskTier, SafetyClassification,
 };
 use crate::safety::project::evaluate_project_dependencies;
 use crate::safety::SafetyGuardian;
@@ -18,7 +18,10 @@ pub struct CleanupPlanner;
 impl CleanupPlanner {
     /// Generates a comprehensive, defensible cleanup plan based on verified data sources,
     /// strict non-double-counting, hierarchy pruning, and safety classifications.
-    pub fn create_plan(req: &CreatePlanRequest, conn: &Connection) -> Result<CleanupPlanDto, String> {
+    pub fn create_plan(
+        req: &CreatePlanRequest,
+        conn: &Connection,
+    ) -> Result<CleanupPlanDto, String> {
         let now_epoch_ms = system_time_to_epoch_ms(SystemTime::now());
         let plan_id = format!("plan_{}", now_epoch_ms);
 
@@ -27,10 +30,18 @@ impl CleanupPlanner {
         // 1. Gather candidates according to requested goal
         match req.goal.as_str() {
             "clean_developer_caches" => {
-                Self::gather_developer_artifacts(conn, req.session_id.as_deref(), &mut raw_candidates);
+                Self::gather_developer_artifacts(
+                    conn,
+                    req.session_id.as_deref(),
+                    &mut raw_candidates,
+                );
             }
             "review_duplicates" => {
-                Self::gather_duplicate_candidates(conn, req.session_id.as_deref(), &mut raw_candidates);
+                Self::gather_duplicate_candidates(
+                    conn,
+                    req.session_id.as_deref(),
+                    &mut raw_candidates,
+                );
             }
             "clean_folder" => {
                 if let Some(ref folder) = req.folder_path {
@@ -40,14 +51,26 @@ impl CleanupPlanner {
             "user_custom" => {
                 if let Some(ref paths) = req.selected_paths {
                     for p in paths {
-                        raw_candidates.push((p.clone(), CandidateSource::UserSelected, PlanItemOperation::Quarantine));
+                        raw_candidates.push((
+                            p.clone(),
+                            CandidateSource::UserSelected,
+                            PlanItemOperation::Quarantine,
+                        ));
                     }
                 }
             }
             _ => {
                 // "free_bytes", "maximize_safe", or general plan: combine developer artifacts, verified duplicates, and large temp files
-                Self::gather_developer_artifacts(conn, req.session_id.as_deref(), &mut raw_candidates);
-                Self::gather_duplicate_candidates(conn, req.session_id.as_deref(), &mut raw_candidates);
+                Self::gather_developer_artifacts(
+                    conn,
+                    req.session_id.as_deref(),
+                    &mut raw_candidates,
+                );
+                Self::gather_duplicate_candidates(
+                    conn,
+                    req.session_id.as_deref(),
+                    &mut raw_candidates,
+                );
                 Self::gather_large_files(conn, req.session_id.as_deref(), &mut raw_candidates);
             }
         }
@@ -57,7 +80,10 @@ impl CleanupPlanner {
             for p in paths {
                 let p_obj = Path::new(p);
                 let (source, op) = if p_obj.is_dir() {
-                    (CandidateSource::DeveloperArtifact, PlanItemOperation::Quarantine)
+                    (
+                        CandidateSource::DeveloperArtifact,
+                        PlanItemOperation::Quarantine,
+                    )
                 } else {
                     (CandidateSource::UserSelected, PlanItemOperation::Quarantine)
                 };
@@ -83,9 +109,9 @@ impl CleanupPlanner {
             }
 
             // Check if path is a child of an already-included candidate directory
-            let is_child_of_included = included_parent_dirs.iter().any(|parent| {
-                is_descendant_of(Path::new(&norm), Path::new(parent))
-            });
+            let is_child_of_included = included_parent_dirs
+                .iter()
+                .any(|parent| is_descendant_of(Path::new(&norm), Path::new(parent)));
 
             if is_child_of_included {
                 continue; // Skip child to prevent double counting and double deletion!
@@ -151,7 +177,8 @@ impl CleanupPlanner {
             };
             *risk_counts.entry(tier_str.to_string()).or_insert(0) += 1;
 
-            let is_selected_by_default = assessment.classification == SafetyClassification::LowRiskCandidate;
+            let is_selected_by_default =
+                assessment.classification == SafetyClassification::LowRiskCandidate;
             let item_id = format!("{}_{}", plan_id, item_counter);
             item_counter += 1;
 
@@ -161,7 +188,9 @@ impl CleanupPlanner {
                 .map(|e| e.claim.clone())
                 .unwrap_or_else(|| "Inspected via native filesystem engine".to_string());
 
-            let potential_impact = if assessment.classification == SafetyClassification::LowRiskCandidate {
+            let potential_impact = if assessment.classification
+                == SafetyClassification::LowRiskCandidate
+            {
                 "Zero data loss. Rebuildable on demand from project lockfile.".to_string()
             } else {
                 "Requires manual user review. File is restorable from Quarantine Vault.".to_string()
@@ -341,7 +370,11 @@ impl CleanupPlanner {
             )
             LIMIT 50
             "#,
-            if sid_clause.is_empty() { "WHERE 1=1" } else { &sid_clause }
+            if sid_clause.is_empty() {
+                "WHERE 1=1"
+            } else {
+                &sid_clause
+            }
         );
 
         if let Ok(mut stmt) = conn.prepare(&sql) {
@@ -350,7 +383,11 @@ impl CleanupPlanner {
                     let p = Path::new(&r);
                     let ev = evaluate_project_dependencies(p);
                     if ev.classification == SafetyClassification::LowRiskCandidate {
-                        candidates.push((r, CandidateSource::DeveloperArtifact, PlanItemOperation::Quarantine));
+                        candidates.push((
+                            r,
+                            CandidateSource::DeveloperArtifact,
+                            PlanItemOperation::Quarantine,
+                        ));
                     }
                 }
             }
@@ -375,7 +412,11 @@ impl CleanupPlanner {
                 for file in group.files {
                     // Only target redundant copies (never the recommended original!)
                     if !file.is_recommended_keep && !file.is_protected {
-                        candidates.push((file.path, CandidateSource::DuplicateGroup, PlanItemOperation::RecycleBin));
+                        candidates.push((
+                            file.path,
+                            CandidateSource::DuplicateGroup,
+                            PlanItemOperation::RecycleBin,
+                        ));
                     }
                 }
             }

@@ -1,10 +1,10 @@
+use notify::{Config, Event, EventKind, RecommendedWatcher, RecursiveMode, Watcher};
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::sync::{mpsc, Arc, Mutex};
 use std::thread;
 use std::time::{Duration, Instant};
-use notify::{Config, Event, EventKind, RecommendedWatcher, RecursiveMode, Watcher};
 
 #[derive(Debug, Clone)]
 pub struct CoalescedFileEvent {
@@ -68,7 +68,12 @@ impl AutomationEventWatcher {
                     match rx.recv_timeout(Duration::from_millis(200)) {
                         Ok(Ok(event)) => {
                             count_clone.fetch_add(1, Ordering::Relaxed);
-                            Self::process_raw_event(event, &queue_clone, &overflow_clone, max_queue_size);
+                            Self::process_raw_event(
+                                event,
+                                &queue_clone,
+                                &overflow_clone,
+                                max_queue_size,
+                            );
                         }
                         Ok(Err(_err)) => {
                             // Buffer overflow from OS notify queue
@@ -123,7 +128,10 @@ impl AutomationEventWatcher {
             for path in event.paths {
                 // Filter out temporary and system lock files
                 let filename = path.file_name().and_then(|n| n.to_str()).unwrap_or("");
-                if filename.starts_with('~') || filename.ends_with(".tmp") || filename.ends_with(".crdownload") {
+                if filename.starts_with('~')
+                    || filename.ends_with(".tmp")
+                    || filename.ends_with(".crdownload")
+                {
                     continue;
                 }
 

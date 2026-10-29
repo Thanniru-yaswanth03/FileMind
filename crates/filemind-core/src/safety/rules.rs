@@ -1,8 +1,8 @@
-use std::path::Path;
 use crate::adapter::path::{
     is_dos_device_name, is_has_alternate_data_stream, normalize_path, strip_verbatim_prefix,
 };
-use crate::models::{SafetyClassification, EvidenceSource, TypedEvidenceItem};
+use crate::models::{EvidenceSource, SafetyClassification, TypedEvidenceItem};
+use std::path::Path;
 
 #[derive(Debug, Clone)]
 pub struct WindowsRuleMatch {
@@ -95,7 +95,8 @@ pub fn evaluate_windows_protection(path: &Path) -> Option<WindowsRuleMatch> {
         || norm_lower.starts_with("c:\\windows")
         || norm_lower.contains(":\\window~")
         || norm_lower.starts_with("c:\\window~")
-        || (norm_lower.contains("volume{") && (norm_lower.contains("\\windows") || norm_lower.contains("\\window~")));
+        || (norm_lower.contains("volume{")
+            && (norm_lower.contains("\\windows") || norm_lower.contains("\\window~")));
 
     if is_windows_dir {
         return Some(WindowsRuleMatch {
@@ -118,7 +119,8 @@ pub fn evaluate_windows_protection(path: &Path) -> Option<WindowsRuleMatch> {
         || norm_lower.contains(":\\program files (x86)")
         || norm_lower.contains(":\\progra~")
         || norm_lower.starts_with("c:\\progra~")
-        || (norm_lower.contains("volume{") && (norm_lower.contains("\\program files") || norm_lower.contains("\\progra~")));
+        || (norm_lower.contains("volume{")
+            && (norm_lower.contains("\\program files") || norm_lower.contains("\\progra~")));
 
     if is_program_files {
         return Some(WindowsRuleMatch {
@@ -137,7 +139,10 @@ pub fn evaluate_windows_protection(path: &Path) -> Option<WindowsRuleMatch> {
     }
 
     // System Volume Information and Recycle Bin
-    if norm_lower.contains("system volume information") || norm_lower.contains("$recycle.bin") || norm_lower.contains(":\\recovery") {
+    if norm_lower.contains("system volume information")
+        || norm_lower.contains("$recycle.bin")
+        || norm_lower.contains(":\\recovery")
+    {
         return Some(WindowsRuleMatch {
             rule_id: "WIN-VOL-METADATA",
             description: "Filesystem metadata, restore points, or Recycle Bin root",
@@ -171,7 +176,9 @@ pub fn evaluate_windows_protection(path: &Path) -> Option<WindowsRuleMatch> {
     }
 
     // Critical AppData Microsoft Windows locations
-    if norm_lower.contains("appdata\\local\\microsoft\\windows") || norm_lower.contains("appdata\\roaming\\microsoft\\windows") {
+    if norm_lower.contains("appdata\\local\\microsoft\\windows")
+        || norm_lower.contains("appdata\\roaming\\microsoft\\windows")
+    {
         return Some(WindowsRuleMatch {
             rule_id: "WIN-USER-OS-DATA",
             description: "Per-user Windows shell, start menu, and credential state",
@@ -188,17 +195,26 @@ pub fn evaluate_windows_protection(path: &Path) -> Option<WindowsRuleMatch> {
     }
 
     // Critical system files (bootmgr, pagefile, hiberfil, swapfile, registry hives)
-    let filename = path.file_name().and_then(|n| n.to_str()).unwrap_or("").to_lowercase();
+    let filename = path
+        .file_name()
+        .and_then(|n| n.to_str())
+        .unwrap_or("")
+        .to_lowercase();
     match filename.as_str() {
-        "pagefile.sys" | "swapfile.sys" | "hiberfil.sys" | "bootmgr" | "bootnxt" | "bootsect.bak" | "bcd" => {
+        "pagefile.sys" | "swapfile.sys" | "hiberfil.sys" | "bootmgr" | "bootnxt"
+        | "bootsect.bak" | "bcd" => {
             return Some(WindowsRuleMatch {
                 rule_id: "WIN-CRITICAL-BOOT-FILE",
                 description: "Windows kernel virtual memory or bootloader configuration file",
                 classification: SafetyClassification::ProtectedAndBlocked,
-                block_reason: "Kernel virtual memory and bootloader files are critical for machine operation",
+                block_reason:
+                    "Kernel virtual memory and bootloader files are critical for machine operation",
                 evidence: TypedEvidenceItem {
                     source: EvidenceSource::WindowsPolicy,
-                    claim: format!("Target filename '{}' is an essential Windows kernel or boot asset", filename),
+                    claim: format!(
+                        "Target filename '{}' is an essential Windows kernel or boot asset",
+                        filename
+                    ),
                     supports_safety: false,
                     verification_status: "Verified".to_string(),
                     details: "Deletion would cause a BSOD or boot failure".to_string(),
@@ -231,10 +247,14 @@ pub fn evaluate_windows_protection(path: &Path) -> Option<WindowsRuleMatch> {
                 rule_id: "WIN-KERNEL-DRIVER",
                 description: "Kernel-mode driver, installation information, or security catalog",
                 classification: SafetyClassification::ProtectedAndBlocked,
-                block_reason: "Device drivers and security catalogs are essential for hardware communication",
+                block_reason:
+                    "Device drivers and security catalogs are essential for hardware communication",
                 evidence: TypedEvidenceItem {
                     source: EvidenceSource::WindowsPolicy,
-                    claim: format!("Target extension '.{}' corresponds to device driver / security catalog", ext_lower),
+                    claim: format!(
+                        "Target extension '.{}' corresponds to device driver / security catalog",
+                        ext_lower
+                    ),
                     supports_safety: false,
                     verification_status: "Verified".to_string(),
                     details: "Drivers must not be removed by file cleanup tools".to_string(),
@@ -245,4 +265,3 @@ pub fn evaluate_windows_protection(path: &Path) -> Option<WindowsRuleMatch> {
 
     None
 }
-

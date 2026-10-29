@@ -50,4 +50,3 @@ fn test_loop_filter_cycle_detection() {
     // Different directory -> allowed
     assert!(filter.mark_visited_or_loop(1234, 9999));
 }
-

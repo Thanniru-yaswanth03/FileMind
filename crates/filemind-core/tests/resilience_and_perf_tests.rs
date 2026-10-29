@@ -17,7 +17,10 @@ fn test_path_normalization_and_containment_properties() {
         (r"C:\Users\John\Documents", r"C:\Users\John\Documents"),
         (r"C:/Users/John/Documents/", r"C:\Users\John\Documents"),
         (r"\\?\C:\Users\John\Documents", r"C:\Users\John\Documents"),
-        (r"C:\Users\..\Users\John\Documents", r"C:\Users\John\Documents"),
+        (
+            r"C:\Users\..\Users\John\Documents",
+            r"C:\Users\John\Documents",
+        ),
     ];
 
     for (input, expected) in test_cases {
@@ -25,14 +28,30 @@ fn test_path_normalization_and_containment_properties() {
         assert_eq!(norm, expected, "Failed normalization for: {}", input);
         let long = to_long_path(Path::new(&norm));
         let long_str = long.to_string_lossy();
-        assert!(long_str.starts_with(r"\\?\") || !long_str.contains(':'), "Expected verbatim prefix for: {}", long_str);
+        assert!(
+            long_str.starts_with(r"\\?\") || !long_str.contains(':'),
+            "Expected verbatim prefix for: {}",
+            long_str
+        );
     }
 
     // Containment invariants
-    assert!(is_descendant_of(Path::new(r"C:\Root\Sub\file.txt"), Path::new(r"C:\Root")));
-    assert!(is_descendant_of(Path::new(r"C:\Root\Sub"), Path::new(r"C:\Root")));
-    assert!(!is_descendant_of(Path::new(r"C:\RootOther\file.txt"), Path::new(r"C:\Root")));
-    assert!(!is_descendant_of(Path::new(r"D:\Root\file.txt"), Path::new(r"C:\Root")));
+    assert!(is_descendant_of(
+        Path::new(r"C:\Root\Sub\file.txt"),
+        Path::new(r"C:\Root")
+    ));
+    assert!(is_descendant_of(
+        Path::new(r"C:\Root\Sub"),
+        Path::new(r"C:\Root")
+    ));
+    assert!(!is_descendant_of(
+        Path::new(r"C:\RootOther\file.txt"),
+        Path::new(r"C:\Root")
+    ));
+    assert!(!is_descendant_of(
+        Path::new(r"D:\Root\file.txt"),
+        Path::new(r"C:\Root")
+    ));
 }
 
 #[test]
@@ -61,7 +80,9 @@ fn test_error_resilience_and_partial_scan_reporting() {
     let session_id = "partial_error_session";
     Database::save_scan_result(&mut conn, session_id, &result, 100, 200).unwrap();
 
-    let session = Database::get_latest_session(&conn, Some(&result.root_path)).unwrap().unwrap();
+    let session = Database::get_latest_session(&conn, Some(&result.root_path))
+        .unwrap()
+        .unwrap();
     assert_eq!(session.total_files, 4);
     assert_eq!(session.status, SessionStatus::Completed);
 }
@@ -76,7 +97,10 @@ fn test_performance_synthetic_scale() {
     let files_per_dir = 50;
     let total_expected = dir_count * files_per_dir;
 
-    println!("\n--- Generating synthetic filesystem tree: {} files across {} directories ---", total_expected, dir_count);
+    println!(
+        "\n--- Generating synthetic filesystem tree: {} files across {} directories ---",
+        total_expected, dir_count
+    );
     let gen_start = Instant::now();
 
     for d in 0..dir_count {
@@ -99,25 +123,46 @@ fn test_performance_synthetic_scale() {
     let result = execute_scan(root, vec![], cancel_token, None, None);
     let scan_duration = scan_start.elapsed();
 
-    println!("Scanned {} files in {:?}", result.total_files, scan_duration);
+    println!(
+        "Scanned {} files in {:?}",
+        result.total_files, scan_duration
+    );
     let files_per_sec = (result.total_files as f64) / scan_duration.as_secs_f64();
     println!("Scan throughput: {:.2} files/sec", files_per_sec);
 
     assert_eq!(result.total_files, total_expected as u64);
     assert_eq!(result.is_cancelled, false);
-    assert!(files_per_sec > 500.0, "Expected scanning throughput > 500 files/sec, got {:.2}", files_per_sec);
+    assert!(
+        files_per_sec > 500.0,
+        "Expected scanning throughput > 500 files/sec, got {:.2}",
+        files_per_sec
+    );
 
     // Step 2: Benchmark SQLite batch persistence
     let mut conn = Database::open_in_memory().unwrap();
     let db_start = Instant::now();
     let session_id = "perf_bench_session";
-    Database::save_scan_result(&mut conn, session_id, &result, 0, scan_duration.as_millis() as u64).unwrap();
+    Database::save_scan_result(
+        &mut conn,
+        session_id,
+        &result,
+        0,
+        scan_duration.as_millis() as u64,
+    )
+    .unwrap();
     let db_duration = db_start.elapsed();
 
-    println!("Persisted {} files to SQLite in {:?}", total_expected, db_duration);
+    println!(
+        "Persisted {} files to SQLite in {:?}",
+        total_expected, db_duration
+    );
     let db_throughput = (total_expected as f64) / db_duration.as_secs_f64();
     println!("Database write throughput: {:.2} files/sec", db_throughput);
-    assert!(db_duration.as_millis() < 4000, "Database batch insert took too long: {:?}", db_duration);
+    assert!(
+        db_duration.as_millis() < 4000,
+        "Database batch insert took too long: {:?}",
+        db_duration
+    );
 
     // Step 3: Benchmark SQLite queries with filters & pagination
     let query_start = Instant::now();
@@ -135,7 +180,11 @@ fn test_performance_synthetic_scale() {
     let query_duration = query_start.elapsed();
 
     println!("Indexed query execution time: {:?}", query_duration);
-    assert!(query_duration.as_millis() < 50, "Indexed query took too long: {:?}", query_duration);
+    assert!(
+        query_duration.as_millis() < 50,
+        "Indexed query took too long: {:?}",
+        query_duration
+    );
     assert!(query_res.total_count > 0);
     assert_eq!(query_res.files.len(), 100);
 

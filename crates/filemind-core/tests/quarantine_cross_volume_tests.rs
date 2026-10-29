@@ -20,13 +20,26 @@ fn test_cross_volume_quarantine_streaming_verification() {
 
     // Move using verified quarantine
     let res = verified_quarantine_move(&test_file, &dest_file, false, Some(&expected_hash));
-    assert!(res.is_ok(), "Verified quarantine move should succeed: {:?}", res);
+    assert!(
+        res.is_ok(),
+        "Verified quarantine move should succeed: {:?}",
+        res
+    );
 
-    assert!(!test_file.exists(), "Original file should be deleted after successful verification");
-    assert!(dest_file.exists(), "Quarantined destination must exist in vault");
+    assert!(
+        !test_file.exists(),
+        "Original file should be deleted after successful verification"
+    );
+    assert!(
+        dest_file.exists(),
+        "Quarantined destination must exist in vault"
+    );
 
     let dest_content = fs::read(&dest_file).unwrap();
-    assert_eq!(dest_content, content, "Restored content must match byte-for-byte");
+    assert_eq!(
+        dest_content, content,
+        "Restored content must match byte-for-byte"
+    );
 }
 
 #[test]
@@ -41,10 +54,19 @@ fn test_quarantine_destination_collision_rejection() {
     // Destination already exists! Must reject with collision error without destroying dest
     let res = verified_quarantine_move(&src, &dest, false, None);
     assert!(res.is_err(), "Must reject destination collision");
-    assert!(res.unwrap_err().contains("collision"), "Error should report collision");
+    assert!(
+        res.unwrap_err().contains("collision"),
+        "Error should report collision"
+    );
 
-    assert!(src.exists(), "Source file must not be modified or deleted on collision");
-    assert_eq!(fs::read_to_string(&dest).unwrap(), "Existing Destination File");
+    assert!(
+        src.exists(),
+        "Source file must not be modified or deleted on collision"
+    );
+    assert_eq!(
+        fs::read_to_string(&dest).unwrap(),
+        "Existing Destination File"
+    );
 }
 
 #[test]
@@ -60,12 +82,23 @@ fn test_quarantine_hash_mismatch_failure_injection() {
 
     // Expected hash does not match
     let res = verified_quarantine_move(&src, &dest, false, Some(wrong_hash));
-    assert!(res.is_err(), "Must abort when cryptographic hash does not match expected");
-    assert!(res.unwrap_err().contains("cryptographic verification failed"));
+    assert!(
+        res.is_err(),
+        "Must abort when cryptographic hash does not match expected"
+    );
+    assert!(res
+        .unwrap_err()
+        .contains("cryptographic verification failed"));
 
     // INVARIANT: Source file must remain 100% intact!
-    assert!(src.exists(), "Source file must never be deleted if verification fails");
-    assert!(!dest.exists(), "Destination file must be purged on failed verification");
+    assert!(
+        src.exists(),
+        "Source file must never be deleted if verification fails"
+    );
+    assert!(
+        !dest.exists(),
+        "Destination file must be purged on failed verification"
+    );
 }
 
 #[test]
@@ -76,12 +109,23 @@ fn test_quarantine_directory_structure_verification() {
 
     fs::create_dir_all(src_tree.join("subfolder")).unwrap();
     fs::write(src_tree.join("file1.txt"), "File 1 content").unwrap();
-    fs::write(src_tree.join("subfolder").join("file2.txt"), "File 2 content inside subfolder").unwrap();
+    fs::write(
+        src_tree.join("subfolder").join("file2.txt"),
+        "File 2 content inside subfolder",
+    )
+    .unwrap();
 
     let res = verified_quarantine_move(&src_tree, &vault_tree, true, None);
-    assert!(res.is_ok(), "Directory quarantine move should succeed: {:?}", res);
+    assert!(
+        res.is_ok(),
+        "Directory quarantine move should succeed: {:?}",
+        res
+    );
 
-    assert!(!src_tree.exists(), "Original directory must be removed after successful verified move");
+    assert!(
+        !src_tree.exists(),
+        "Original directory must be removed after successful verified move"
+    );
     assert!(vault_tree.join("file1.txt").exists());
     assert!(vault_tree.join("subfolder").join("file2.txt").exists());
 }

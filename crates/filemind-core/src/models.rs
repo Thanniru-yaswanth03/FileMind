@@ -210,8 +210,8 @@ pub struct FileListQuery {
     pub search: Option<String>,
     pub min_size: Option<u64>,
     pub max_size: Option<u64>,
-    pub sort_by: Option<String>,   // "size", "name", "mtime", "category"
-    pub sort_order: Option<String>,// "asc", "desc"
+    pub sort_by: Option<String>,    // "size", "name", "mtime", "category"
+    pub sort_order: Option<String>, // "asc", "desc"
     pub limit: Option<u32>,
     pub offset: Option<u32>,
 }
@@ -937,7 +937,7 @@ impl Default for ExecutionLimits {
         Self {
             max_files_per_run: 100,
             max_bytes_per_run: 10 * 1024 * 1024 * 1024, // 10 GB
-            cooldown_seconds: 300,                       // 5 minutes
+            cooldown_seconds: 300,                      // 5 minutes
         }
     }
 }
@@ -1086,8 +1086,3 @@ pub struct CleanProjectArtifactsResponse {
     pub total_bytes: u64,
     pub requires_explicit_approval: bool,
 }
-
-
-
-
-

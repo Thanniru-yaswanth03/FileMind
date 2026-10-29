@@ -2,7 +2,9 @@ use std::path::Path;
 use walkdir::WalkDir;
 
 use crate::models::{DeveloperArtifactDto, DeveloperProjectDto, RiskTier};
-use crate::safety::project::{find_git_repository, inspect_package_manager_ecosystem, is_secret_file};
+use crate::safety::project::{
+    find_git_repository, inspect_package_manager_ecosystem, is_secret_file,
+};
 
 pub struct DeveloperWorkspaceScanner;
 
@@ -66,7 +68,10 @@ impl DeveloperWorkspaceScanner {
                     visited_project_dirs.insert(parent_canonical);
                     projects.push(project);
                 }
-            } else if filename == "pyproject.toml" || filename == "Pipfile" || filename == "requirements.txt" {
+            } else if filename == "pyproject.toml"
+                || filename == "Pipfile"
+                || filename == "requirements.txt"
+            {
                 if let Some(project) = Self::inspect_python_project(parent_dir, &filename) {
                     visited_project_dirs.insert(parent_canonical);
                     projects.push(project);
@@ -89,7 +94,11 @@ impl DeveloperWorkspaceScanner {
             return None;
         }
 
-        let name = dir.file_name().and_then(|n| n.to_str()).unwrap_or("NodeJS Project").to_string();
+        let name = dir
+            .file_name()
+            .and_then(|n| n.to_str())
+            .unwrap_or("NodeJS Project")
+            .to_string();
         let (manifest, lockfile) = inspect_package_manager_ecosystem(&dir.join("dummy_artifact"));
         let git_status = Self::check_git_status(dir);
         let is_clean = git_status == "clean";
@@ -142,9 +151,16 @@ impl DeveloperWorkspaceScanner {
                     category: "Build Output".to_string(),
                     is_regenerable: true,
                     reversibility: "Quarantine Vault / npm run build".to_string(),
-                    cleanup_procedure: "Stage to quarantine; regenerable via build script".to_string(),
-                    risk_tier: if is_clean { RiskTier::Safe } else { RiskTier::Caution },
-                    risks_and_questions: "Regenerable compilation artifact. Staged into per-volume vault.".to_string(),
+                    cleanup_procedure: "Stage to quarantine; regenerable via build script"
+                        .to_string(),
+                    risk_tier: if is_clean {
+                        RiskTier::Safe
+                    } else {
+                        RiskTier::Caution
+                    },
+                    risks_and_questions:
+                        "Regenerable compilation artifact. Staged into per-volume vault."
+                            .to_string(),
                 });
             }
         }
@@ -169,9 +185,17 @@ impl DeveloperWorkspaceScanner {
             return None;
         }
 
-        let name = dir.file_name().and_then(|n| n.to_str()).unwrap_or("Rust Project").to_string();
+        let name = dir
+            .file_name()
+            .and_then(|n| n.to_str())
+            .unwrap_or("Rust Project")
+            .to_string();
         let cargo_lock = dir.join("Cargo.lock");
-        let lockfile = if cargo_lock.exists() { Some("Cargo.lock".to_string()) } else { None };
+        let lockfile = if cargo_lock.exists() {
+            Some("Cargo.lock".to_string())
+        } else {
+            None
+        };
         let git_status = Self::check_git_status(dir);
         let is_clean = git_status == "clean";
 
@@ -197,12 +221,15 @@ impl DeveloperWorkspaceScanner {
                 category: "Build Output".to_string(),
                 is_regenerable: true,
                 reversibility: "Quarantine Vault / cargo build".to_string(),
-                cleanup_procedure: "Stage to quarantine; regenerable via cargo build / cargo clean".to_string(),
+                cleanup_procedure: "Stage to quarantine; regenerable via cargo build / cargo clean"
+                    .to_string(),
                 risk_tier: risk,
                 risks_and_questions: if lockfile.is_none() {
-                    "Missing Cargo.lock; cargo clean will require dependency re-resolution.".to_string()
+                    "Missing Cargo.lock; cargo clean will require dependency re-resolution."
+                        .to_string()
                 } else if !is_clean {
-                    "Uncommitted work present in repository. Target contains compilation cache.".to_string()
+                    "Uncommitted work present in repository. Target contains compilation cache."
+                        .to_string()
                 } else {
                     "Safe to purge. Fully regenerable with Cargo.".to_string()
                 },
@@ -224,7 +251,11 @@ impl DeveloperWorkspaceScanner {
 
     /// Inspect a Python project directory
     pub fn inspect_python_project(dir: &Path, manifest_name: &str) -> Option<DeveloperProjectDto> {
-        let name = dir.file_name().and_then(|n| n.to_str()).unwrap_or("Python Project").to_string();
+        let name = dir
+            .file_name()
+            .and_then(|n| n.to_str())
+            .unwrap_or("Python Project")
+            .to_string();
         let git_status = Self::check_git_status(dir);
         let is_clean = git_status == "clean";
 
@@ -243,7 +274,11 @@ impl DeveloperWorkspaceScanner {
         for venv_name in &[".venv", "venv", "env"] {
             let venv_dir = dir.join(venv_name);
             // Verify it's actually a virtual environment (contains pyvenv.cfg or Scripts/bin)
-            if venv_dir.exists() && (venv_dir.join("pyvenv.cfg").exists() || venv_dir.join("Scripts").exists() || venv_dir.join("bin").exists()) {
+            if venv_dir.exists()
+                && (venv_dir.join("pyvenv.cfg").exists()
+                    || venv_dir.join("Scripts").exists()
+                    || venv_dir.join("bin").exists())
+            {
                 let size = Self::calculate_directory_size(&venv_dir);
                 total_size += size;
                 artifacts.push(DeveloperArtifactDto {
@@ -254,9 +289,16 @@ impl DeveloperWorkspaceScanner {
                     category: "Virtual Environment".to_string(),
                     is_regenerable: true,
                     reversibility: "Quarantine Vault / python -m venv".to_string(),
-                    cleanup_procedure: "Stage to quarantine; regenerable via virtual environment creation".to_string(),
-                    risk_tier: if is_clean { RiskTier::Safe } else { RiskTier::Caution },
-                    risks_and_questions: "Virtual environment package cache. Reversible via quarantine.".to_string(),
+                    cleanup_procedure:
+                        "Stage to quarantine; regenerable via virtual environment creation"
+                            .to_string(),
+                    risk_tier: if is_clean {
+                        RiskTier::Safe
+                    } else {
+                        RiskTier::Caution
+                    },
+                    risks_and_questions:
+                        "Virtual environment package cache. Reversible via quarantine.".to_string(),
                 });
             }
         }
@@ -302,9 +344,17 @@ impl DeveloperWorkspaceScanner {
             return None;
         }
 
-        let name = dir.file_name().and_then(|n| n.to_str()).unwrap_or("Go Project").to_string();
+        let name = dir
+            .file_name()
+            .and_then(|n| n.to_str())
+            .unwrap_or("Go Project")
+            .to_string();
         let go_sum = dir.join("go.sum");
-        let lockfile = if go_sum.exists() { Some("go.sum".to_string()) } else { None };
+        let lockfile = if go_sum.exists() {
+            Some("go.sum".to_string())
+        } else {
+            None
+        };
         let git_status = Self::check_git_status(dir);
 
         let mut artifacts = Vec::new();

@@ -92,4 +92,3 @@ fn test_retention_pruning() {
         .unwrap();
     assert_eq!(remaining, 1);
 }
-

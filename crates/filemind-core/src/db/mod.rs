@@ -6,4 +6,3 @@ pub mod schema;
 pub use migrations::Migrator;
 pub use repository::Database;
 pub use retention::RetentionManager;
-

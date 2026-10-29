@@ -163,7 +163,10 @@ impl OllamaClient {
                 endpoint: endpoint.to_string(),
                 models: Vec::new(),
                 active_model: None,
-                error: Some(format!("Ollama unreachable: {}. Local rule-based engine active.", e)),
+                error: Some(format!(
+                    "Ollama unreachable: {}. Local rule-based engine active.",
+                    e
+                )),
             },
         }
     }
@@ -202,7 +205,8 @@ CRITICAL SAFETY INSTRUCTIONS:
 
         let body_str = serde_json::to_string(&payload).map_err(|e| e.to_string())?;
 
-        let resp_body = Self::send_http_request(&host, port, "POST", "/api/generate", Some(&body_str), 15)?;
+        let resp_body =
+            Self::send_http_request(&host, port, "POST", "/api/generate", Some(&body_str), 15)?;
 
         if let Ok(json_resp) = serde_json::from_str::<serde_json::Value>(&resp_body) {
             if let Some(text) = json_resp.get("response").and_then(|v| v.as_str()) {
@@ -217,4 +221,3 @@ CRITICAL SAFETY INSTRUCTIONS:
         }
     }
 }
-

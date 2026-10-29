@@ -53,11 +53,7 @@ fn test_known_file_sizes_and_nested_folders() {
     assert_eq!(empty_record.unwrap().total_size_bytes, 0);
 
     // Verify root directory aggregated all nested files
-    let root_record = result
-        .directories
-        .iter()
-        .find(|d| d.depth == 0)
-        .unwrap();
+    let root_record = result.directories.iter().find(|d| d.depth == 0).unwrap();
     assert_eq!(root_record.file_count, 3);
     assert_eq!(root_record.total_size_bytes, 850);
 }
@@ -85,8 +81,16 @@ fn test_duplicate_filenames_in_different_directories() {
     assert_eq!(result.total_files, 2);
     assert_eq!(result.total_logical_bytes, 900);
 
-    let doc_a = result.files.iter().find(|f| f.parent_path.ends_with("folder_a")).unwrap();
-    let doc_b = result.files.iter().find(|f| f.parent_path.ends_with("folder_b")).unwrap();
+    let doc_a = result
+        .files
+        .iter()
+        .find(|f| f.parent_path.ends_with("folder_a"))
+        .unwrap();
+    let doc_b = result
+        .files
+        .iter()
+        .find(|f| f.parent_path.ends_with("folder_b"))
+        .unwrap();
 
     assert_eq!(doc_a.name, "document.pdf");
     assert_eq!(doc_a.size_bytes, 300);

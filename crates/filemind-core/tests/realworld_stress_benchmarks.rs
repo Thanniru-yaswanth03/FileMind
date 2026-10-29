@@ -36,7 +36,13 @@ fn test_deep_directory_nesting_and_aggregation() {
     let cancel_token = Arc::new(AtomicBool::new(false));
     let t0 = Instant::now();
 
-    let scan_result = execute_scan(&base, vec![], cancel_token, None, Some("deep_bench".to_string()));
+    let scan_result = execute_scan(
+        &base,
+        vec![],
+        cancel_token,
+        None,
+        Some("deep_bench".to_string()),
+    );
     let elapsed = t0.elapsed();
 
     println!(
@@ -46,7 +52,10 @@ fn test_deep_directory_nesting_and_aggregation() {
 
     assert_eq!(scan_result.total_files, total_created_files as u64);
     assert!(scan_result.total_directories >= 35);
-    assert!(elapsed.as_millis() < 500, "Deep scan must complete under 500ms");
+    assert!(
+        elapsed.as_millis() < 500,
+        "Deep scan must complete under 500ms"
+    );
 }
 
 #[test]
@@ -67,7 +76,8 @@ fn test_large_file_streaming_hashing_throughput_and_bounds() {
     }
 
     let t0 = Instant::now();
-    let (hash, total_bytes_read, initial_mtime) = compute_file_blake3_streaming(&test_file).unwrap();
+    let (hash, total_bytes_read, initial_mtime) =
+        compute_file_blake3_streaming(&test_file).unwrap();
     let duration = t0.elapsed();
 
     let mb = (target_bytes as f64) / (1024.0 * 1024.0);
@@ -79,10 +89,16 @@ fn test_large_file_streaming_hashing_throughput_and_bounds() {
         mb, duration, throughput_mb_s, hash
     );
 
-    assert_eq!(total_bytes_read, target_bytes as u64, "Large file hashing must read 100% of stream");
+    assert_eq!(
+        total_bytes_read, target_bytes as u64,
+        "Large file hashing must read 100% of stream"
+    );
     assert!(initial_mtime > 0);
     assert!(!hash.is_empty());
-    assert!(throughput_mb_s > 30.0, "Streaming hashing must achieve at least 30 MB/s");
+    assert!(
+        throughput_mb_s > 30.0,
+        "Streaming hashing must achieve at least 30 MB/s"
+    );
 }
 
 #[test]
@@ -96,7 +112,11 @@ fn test_cancellation_latency_under_load() {
         let dir = base.join(format!("dir_{}", d));
         fs::create_dir_all(&dir).unwrap();
         for f in 0..100 {
-            fs::write(dir.join(format!("item_{}.txt", f)), "filler data for cancellation test").unwrap();
+            fs::write(
+                dir.join(format!("item_{}.txt", f)),
+                "filler data for cancellation test",
+            )
+            .unwrap();
         }
     }
 
@@ -110,7 +130,13 @@ fn test_cancellation_latency_under_load() {
     });
 
     let t0 = Instant::now();
-    let result = execute_scan(&base, vec![], cancel_token, None, Some("cancel_bench".to_string()));
+    let result = execute_scan(
+        &base,
+        vec![],
+        cancel_token,
+        None,
+        Some("cancel_bench".to_string()),
+    );
     let cancel_latency = t0.elapsed();
 
     println!(
@@ -147,11 +173,13 @@ fn test_synthetic_scale_25000_records_sqlite_query_latency() {
         ) VALUES (?1, ?2, ?3, ?4, 'completed', 25000, 100, 500000000, 520000000, 0)
         "#,
         rusqlite::params![session_id, "C:\\ScaleTest", 1000, 2000],
-    ).unwrap();
+    )
+    .unwrap();
 
     {
-        let mut file_stmt = tx.prepare(
-            r#"
+        let mut file_stmt = tx
+            .prepare(
+                r#"
             INSERT INTO files (
                 session_id, directory_path, filename, extension, file_type,
                 logical_size_bytes, physical_size_bytes, attributes, ctime, mtime, atime,
@@ -161,7 +189,8 @@ fn test_synthetic_scale_25000_records_sqlite_query_latency() {
                 NULL, 'safe', 'Generated benchmark file', 0
             )
             "#,
-        ).unwrap();
+            )
+            .unwrap();
 
         for i in 1..=25_000 {
             let ext = match i % 5 {
@@ -181,15 +210,26 @@ fn test_synthetic_scale_25000_records_sqlite_query_latency() {
             let dir_p = format!("C:\\ScaleTest\\sub_{:02}", i % 50);
             let sz = (i as u64) * 1024;
 
-            file_stmt.execute(rusqlite::params![
-                session_id, dir_p, fname, ext, cat, sz, sz + 4096
-            ]).unwrap();
+            file_stmt
+                .execute(rusqlite::params![
+                    session_id,
+                    dir_p,
+                    fname,
+                    ext,
+                    cat,
+                    sz,
+                    sz + 4096
+                ])
+                .unwrap();
         }
     }
 
     tx.commit().unwrap();
     let insert_duration = t0.elapsed();
-    println!("\n[Scale Test] 25,000 records inserted in {:?}", insert_duration);
+    println!(
+        "\n[Scale Test] 25,000 records inserted in {:?}",
+        insert_duration
+    );
 
     // 1. Query: Paginated files sorted by size DESC
     let q_start = Instant::now();
@@ -225,6 +265,12 @@ fn test_synthetic_scale_25000_records_sqlite_query_latency() {
     // 2. Measure SQLite DB file size
     let db_file_meta = fs::metadata(&db_path).unwrap();
     let db_mb = (db_file_meta.len() as f64) / (1024.0 * 1024.0);
-    println!("[Scale Test] SQLite Database on-disk size for 25,000 rows: {:.2} MB", db_mb);
-    assert!(db_mb < 20.0, "Database size for 25,000 records must remain under 20MB");
+    println!(
+        "[Scale Test] SQLite Database on-disk size for 25,000 rows: {:.2} MB",
+        db_mb
+    );
+    assert!(
+        db_mb < 20.0,
+        "Database size for 25,000 records must remain under 20MB"
+    );
 }

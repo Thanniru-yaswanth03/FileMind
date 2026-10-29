@@ -28,20 +28,25 @@ pub struct ReconciliationScanner;
 impl ReconciliationScanner {
     /// Perform a conservative reconciliation scan between SQLite index and live filesystem.
     /// Does not rely on watcher events. Accurately detects additions, modifications, renames, and deletions.
-    pub fn reconcile(conn: &mut Connection, session_id: &str, root_path: &Path) -> Result<ReconcileReport> {
+    pub fn reconcile(
+        conn: &mut Connection,
+        session_id: &str,
+        root_path: &Path,
+    ) -> Result<ReconcileReport> {
         let norm_root = normalize_path(root_path);
-        let vol_info = query_volume_info(root_path).unwrap_or_else(|_| crate::adapter::volume::VolumeInfo {
-            root_path: norm_root.clone(),
-            drive_letter: "C".to_string(),
-            volume_label: "Local Disk".to_string(),
-            filesystem_type: "NTFS".to_string(),
-            cluster_size_bytes: 4096,
-            total_bytes: 0,
-            free_bytes: 0,
-            available_bytes: 0,
-            is_system_drive: false,
-            volume_serial: 0,
-        });
+        let vol_info =
+            query_volume_info(root_path).unwrap_or_else(|_| crate::adapter::volume::VolumeInfo {
+                root_path: norm_root.clone(),
+                drive_letter: "C".to_string(),
+                volume_label: "Local Disk".to_string(),
+                filesystem_type: "NTFS".to_string(),
+                cluster_size_bytes: 4096,
+                total_bytes: 0,
+                free_bytes: 0,
+                available_bytes: 0,
+                is_system_drive: false,
+                volume_serial: 0,
+            });
 
         // Load existing indexed files into memory: path -> (file_id, size, ntfs_file_id)
         let mut indexed_by_path: HashMap<String, (i64, u64, Option<String>)> = HashMap::new();
@@ -160,11 +165,7 @@ impl ReconciliationScanner {
                     } else if let Some(ref fid) = meta.ntfs_file_id {
                         // Check if file was renamed/moved (same NTFS MFT record ID)
                         if let Some(&(file_id, ref _old_path)) = indexed_by_ntfs_id.get(fid) {
-                            rename_stmt.execute(params![
-                                norm_current_dir,
-                                filename,
-                                file_id,
-                            ])?;
+                            rename_stmt.execute(params![norm_current_dir, filename, file_id,])?;
                             renamed += 1;
                         } else {
                             // New file
@@ -173,7 +174,8 @@ impl ReconciliationScanner {
                                 .map(|s| s.to_string_lossy().to_string())
                                 .unwrap_or_default();
                             let cat = categorize_file(&entry_path, &ext);
-                            let (risk, rationale) = evaluate_risk_tier(&entry_path, cat, meta.is_system);
+                            let (risk, rationale) =
+                                evaluate_risk_tier(&entry_path, cat, meta.is_system);
 
                             let cat_str = match cat {
                                 FileCategory::Code => "Code",
@@ -196,7 +198,11 @@ impl ReconciliationScanner {
                                 session_id,
                                 norm_current_dir,
                                 filename,
-                                if ext.is_empty() { String::new() } else { format!(".{}", ext.to_lowercase()) },
+                                if ext.is_empty() {
+                                    String::new()
+                                } else {
+                                    format!(".{}", ext.to_lowercase())
+                                },
                                 cat_str,
                                 meta.logical_size_bytes as i64,
                                 meta.physical_size_bytes as i64,
@@ -218,13 +224,18 @@ impl ReconciliationScanner {
                             .map(|s| s.to_string_lossy().to_string())
                             .unwrap_or_default();
                         let cat = categorize_file(&entry_path, &ext);
-                        let (_risk, rationale) = evaluate_risk_tier(&entry_path, cat, meta.is_system);
+                        let (_risk, rationale) =
+                            evaluate_risk_tier(&entry_path, cat, meta.is_system);
 
                         insert_stmt.execute(params![
                             session_id,
                             norm_current_dir,
                             filename,
-                            if ext.is_empty() { String::new() } else { format!(".{}", ext.to_lowercase()) },
+                            if ext.is_empty() {
+                                String::new()
+                            } else {
+                                format!(".{}", ext.to_lowercase())
+                            },
                             "Other",
                             meta.logical_size_bytes as i64,
                             meta.physical_size_bytes as i64,

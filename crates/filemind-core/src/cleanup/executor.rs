@@ -2,9 +2,7 @@ use rusqlite::{params, Connection};
 use std::path::Path;
 
 use crate::cleanup::quarantine::QuarantineManager;
-use crate::models::{
-    ExecutePlanResponse, PlanItemOperation, PlanStatus,
-};
+use crate::models::{ExecutePlanResponse, PlanItemOperation, PlanStatus};
 use crate::safety::toctou::{capture_identity_snapshot, revalidate_handle};
 use crate::safety::SafetyGuardian;
 
@@ -97,7 +95,8 @@ impl CleanupExecutor {
             let snapshot = match capture_identity_snapshot(path_obj) {
                 Ok(snap) => snap,
                 Err(e) => {
-                    let err_msg = format!("Target disappeared or inaccessible before execution: {}", e);
+                    let err_msg =
+                        format!("Target disappeared or inaccessible before execution: {}", e);
                     errors.push(err_msg.clone());
                     failed_count += 1;
 
@@ -110,7 +109,10 @@ impl CleanupExecutor {
             };
 
             // Detect adversarial file modification between user plan approval and execution
-            if !snapshot.is_directory && item.logical_size_bytes > 0 && snapshot.logical_size_bytes != item.logical_size_bytes {
+            if !snapshot.is_directory
+                && item.logical_size_bytes > 0
+                && snapshot.logical_size_bytes != item.logical_size_bytes
+            {
                 let err_msg = format!(
                     "TOCTOU violation: File size changed between approval and execution! Expected {} bytes, live is {} bytes",
                     item.logical_size_bytes, snapshot.logical_size_bytes
@@ -185,7 +187,9 @@ impl CleanupExecutor {
                         );
                     } else {
                         failed_count += 1;
-                        let err_msg = res.error.unwrap_or_else(|| "Recycle bin operation failed".to_string());
+                        let err_msg = res
+                            .error
+                            .unwrap_or_else(|| "Recycle bin operation failed".to_string());
                         errors.push(format!("Recycle failed for '{}': {}", item.path, err_msg));
 
                         let _ = conn.execute(
@@ -213,7 +217,9 @@ impl CleanupExecutor {
                         );
                     } else {
                         failed_count += 1;
-                        let err_msg = res.error.unwrap_or_else(|| "Permanent delete failed".to_string());
+                        let err_msg = res
+                            .error
+                            .unwrap_or_else(|| "Permanent delete failed".to_string());
                         errors.push(format!("Delete failed for '{}': {}", item.path, err_msg));
 
                         let _ = conn.execute(

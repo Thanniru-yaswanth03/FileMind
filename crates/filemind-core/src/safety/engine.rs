@@ -1,6 +1,6 @@
+use rusqlite::Connection;
 use std::path::Path;
 use std::time::SystemTime;
-use rusqlite::Connection;
 
 use crate::adapter::metadata::{inspect_file, system_time_to_epoch_ms};
 use crate::adapter::path::{normalize_path, strip_verbatim_prefix, to_long_path};
@@ -79,10 +79,18 @@ impl SafetyGuardian {
                         details: format!("NTFS Identity: {:?}", meta.ntfs_file_id),
                     });
 
-                    (meta.ntfs_file_id, meta.logical_size_bytes, meta.is_directory, meta.is_locked)
+                    (
+                        meta.ntfs_file_id,
+                        meta.logical_size_bytes,
+                        meta.is_directory,
+                        meta.is_locked,
+                    )
                 }
                 Err(e) => {
-                    missing_evidence.push(format!("Unable to open target handle for inspection: {}", e));
+                    missing_evidence.push(format!(
+                        "Unable to open target handle for inspection: {}",
+                        e
+                    ));
                     (None, 0, path_obj.is_dir(), false)
                 }
             }
@@ -144,7 +152,8 @@ impl SafetyGuardian {
 
         if project_ev.has_secrets {
             rule_matches.push("DEV-SECRET-CREDENTIAL-BLOCKED".to_string());
-            consequences.push("Target contains secret or credential file; deletion prohibited".to_string());
+            consequences
+                .push("Target contains secret or credential file; deletion prohibited".to_string());
 
             return SafetyAssessmentDto {
                 target_path: clean_path.to_string(),
@@ -159,7 +168,9 @@ impl SafetyGuardian {
                 missing_evidence,
                 consequences,
                 recovery_possibility: "IrreversiblePermanentLoss".to_string(),
-                block_reason: Some("Credential, API key, or private key file cannot be deleted".to_string()),
+                block_reason: Some(
+                    "Credential, API key, or private key file cannot be deleted".to_string(),
+                ),
                 evidence: evidence_items,
                 evaluated_at_epoch_ms: now_epoch_ms,
             };
@@ -183,55 +194,65 @@ impl SafetyGuardian {
                 missing_evidence,
                 consequences,
                 recovery_possibility: "Unknown".to_string(),
-                block_reason: Some("File is currently locked with exclusive sharing permissions".to_string()),
+                block_reason: Some(
+                    "File is currently locked with exclusive sharing permissions".to_string(),
+                ),
                 evidence: evidence_items,
                 evaluated_at_epoch_ms: now_epoch_ms,
             };
         }
 
         // 6. Classification Synthesis with Fail-Closed Principle
-        let (classification, allowed_op, is_permitted, recovery_possibility, block_reason) = match project_ev.classification {
-            SafetyClassification::LowRiskCandidate => {
-                consequences.push("Target can be safely cleaned and regenerated via package manager / build tool".to_string());
-                (
-                    SafetyClassification::LowRiskCandidate,
-                    AllowedOperation::Permitted,
-                    true,
-                    "RegenerableViaBuildTool".to_string(),
-                    None,
-                )
-            }
-            SafetyClassification::ReviewRequired => {
-                consequences.push("Deletion will permanently remove user file; requires explicit manual consent".to_string());
-                (
-                    SafetyClassification::ReviewRequired,
-                    AllowedOperation::RequiresExplicitUserConfirmation,
-                    false, // Not permitted by default; requires explicit user override
-                    if operation == "recycle" { "RecycleBinRestorable".to_string() } else { "IrreversiblePermanentLoss".to_string() },
-                    Some("Requires explicit user review and confirmation".to_string()),
-                )
-            }
-            SafetyClassification::HighRiskOrUnknown => {
-                consequences.push("Insufficient or conflicting evidence; failed closed to prevent accidental data destruction".to_string());
-                (
-                    SafetyClassification::HighRiskOrUnknown,
-                    AllowedOperation::Blocked,
-                    false,
-                    "Unknown".to_string(),
-                    Some(project_ev.explanation),
-                )
-            }
-            SafetyClassification::ProtectedAndBlocked => {
-                consequences.push("Target matches protection policy; operation completely blocked".to_string());
-                (
-                    SafetyClassification::ProtectedAndBlocked,
-                    AllowedOperation::Blocked,
-                    false,
-                    "None".to_string(),
-                    Some(project_ev.explanation),
-                )
-            }
-        };
+        let (classification, allowed_op, is_permitted, recovery_possibility, block_reason) =
+            match project_ev.classification {
+                SafetyClassification::LowRiskCandidate => {
+                    consequences.push("Target can be safely cleaned and regenerated via package manager / build tool".to_string());
+                    (
+                        SafetyClassification::LowRiskCandidate,
+                        AllowedOperation::Permitted,
+                        true,
+                        "RegenerableViaBuildTool".to_string(),
+                        None,
+                    )
+                }
+                SafetyClassification::ReviewRequired => {
+                    consequences.push("Deletion will permanently remove user file; requires explicit manual consent".to_string());
+                    (
+                        SafetyClassification::ReviewRequired,
+                        AllowedOperation::RequiresExplicitUserConfirmation,
+                        false, // Not permitted by default; requires explicit user override
+                        if operation == "recycle" {
+                            "RecycleBinRestorable".to_string()
+                        } else {
+                            "IrreversiblePermanentLoss".to_string()
+                        },
+                        Some("Requires explicit user review and confirmation".to_string()),
+                    )
+                }
+                SafetyClassification::HighRiskOrUnknown => {
+                    consequences.push("Insufficient or conflicting evidence; failed closed to prevent accidental data destruction".to_string());
+                    (
+                        SafetyClassification::HighRiskOrUnknown,
+                        AllowedOperation::Blocked,
+                        false,
+                        "Unknown".to_string(),
+                        Some(project_ev.explanation),
+                    )
+                }
+                SafetyClassification::ProtectedAndBlocked => {
+                    consequences.push(
+                        "Target matches protection policy; operation completely blocked"
+                            .to_string(),
+                    );
+                    (
+                        SafetyClassification::ProtectedAndBlocked,
+                        AllowedOperation::Blocked,
+                        false,
+                        "None".to_string(),
+                        Some(project_ev.explanation),
+                    )
+                }
+            };
 
         SafetyAssessmentDto {
             target_path: clean_path.to_string(),
@@ -292,7 +313,9 @@ impl SafetyGuardian {
                         block_reasons: vec![assessment.block_reason.clone().unwrap_or_default()],
                         toctou_verified: false,
                         executed: false,
-                        execution_result: Some("REJECTED: Protected target policy enforced".to_string()),
+                        execution_result: Some(
+                            "REJECTED: Protected target policy enforced".to_string(),
+                        ),
                         timestamp_epoch_ms: system_time_to_epoch_ms(SystemTime::now()),
                     },
                 );
@@ -303,7 +326,9 @@ impl SafetyGuardian {
                 success: false,
                 error: Some(format!(
                     "Operation BLOCKED: {}",
-                    assessment.block_reason.unwrap_or_else(|| "Target is protected".to_string())
+                    assessment
+                        .block_reason
+                        .unwrap_or_else(|| "Target is protected".to_string())
                 )),
                 toctou_verified: false,
                 method_used: "None".to_string(),
@@ -455,11 +480,12 @@ impl SafetyGuardian {
 pub fn send_to_recycle_bin(path: &Path) -> Result<(), String> {
     use std::os::windows::ffi::OsStrExt;
     use windows_sys::Win32::UI::Shell::{
-        SHFileOperationW, FOF_ALLOWUNDO, FOF_NOCONFIRMATION, FOF_NOERRORUI, FOF_SILENT,
-        FO_DELETE, SHFILEOPSTRUCTW,
+        SHFileOperationW, FOF_ALLOWUNDO, FOF_NOCONFIRMATION, FOF_NOERRORUI, FOF_SILENT, FO_DELETE,
+        SHFILEOPSTRUCTW,
     };
 
-    let clean_str = crate::adapter::path::strip_verbatim_prefix(&path.to_string_lossy()).replace('/', "\\");
+    let clean_str =
+        crate::adapter::path::strip_verbatim_prefix(&path.to_string_lossy()).replace('/', "\\");
     let mut wide: Vec<u16> = std::ffi::OsStr::new(&clean_str).encode_wide().collect();
     wide.push(0);
     wide.push(0); // SHFileOperationW requires double null termination

@@ -13,15 +13,24 @@ fn test_automation_rule_persistence_and_seeding() {
 
     // 1. Verify default rules were seeded
     let rules = Database::list_automation_rules(&conn).unwrap();
-    assert!(rules.len() >= 3, "Expected at least 3 default seeded automation rules, found {}", rules.len());
+    assert!(
+        rules.len() >= 3,
+        "Expected at least 3 default seeded automation rules, found {}",
+        rules.len()
+    );
 
-    let low_space = rules.iter().find(|r| r.rule_id == "rule_low_disk_space").unwrap();
+    let low_space = rules
+        .iter()
+        .find(|r| r.rule_id == "rule_low_disk_space")
+        .unwrap();
     assert_eq!(low_space.name, "Low Disk Space Alert");
     assert!(low_space.is_enabled);
 
     // 2. Toggle rule status
     Database::toggle_automation_rule(&conn, "rule_low_disk_space", false).unwrap();
-    let updated = Database::get_automation_rule(&conn, "rule_low_disk_space").unwrap().unwrap();
+    let updated = Database::get_automation_rule(&conn, "rule_low_disk_space")
+        .unwrap()
+        .unwrap();
     assert!(!updated.is_enabled);
 
     // 3. Insert custom rule
@@ -53,7 +62,9 @@ fn test_automation_rule_persistence_and_seeding() {
     };
 
     Database::insert_automation_rule(&conn, &custom_rule).unwrap();
-    let fetched = Database::get_automation_rule(&conn, "rule_custom_test").unwrap().unwrap();
+    let fetched = Database::get_automation_rule(&conn, "rule_custom_test")
+        .unwrap()
+        .unwrap();
     assert_eq!(fetched.name, "Test Downloads Archive");
 
     // 4. Delete rule
@@ -67,9 +78,16 @@ fn test_execution_limits_cooldown() {
     let conn = Database::open_in_memory().unwrap();
     let quarantine = QuarantineManager::new(None);
 
-    let mut rule = Database::get_automation_rule(&conn, "rule_low_disk_space").unwrap().unwrap();
+    let mut rule = Database::get_automation_rule(&conn, "rule_low_disk_space")
+        .unwrap()
+        .unwrap();
     rule.execution_limits.cooldown_seconds = 600; // 10 minute cooldown
-    rule.last_run_at = Some(std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_millis() as u64);
+    rule.last_run_at = Some(
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_millis() as u64,
+    );
 
     let history = AutomationEngine::execute_rule(&conn, &rule, &quarantine, None, Some("test"));
     assert_eq!(history.status, "blocked");
@@ -110,14 +128,18 @@ fn test_safety_engine_blocks_protected_paths_in_automation() {
 
     Database::insert_automation_rule(&conn, &protected_rule).unwrap();
 
-    let history = AutomationEngine::execute_rule(&conn, &protected_rule, &quarantine, None, Some("test"));
+    let history =
+        AutomationEngine::execute_rule(&conn, &protected_rule, &quarantine, None, Some("test"));
     assert_eq!(history.status, "failed");
-    assert!(history.result_summary.contains("AUTOMATION STRICTLY BLOCKED"));
+    assert!(history
+        .result_summary
+        .contains("AUTOMATION STRICTLY BLOCKED"));
     assert_eq!(history.files_affected_count, 0);
     assert_eq!(history.bytes_affected, 0);
 
     // Verify history log was persisted to SQLite
-    let history_logs = Database::list_automation_history(&conn, Some("rule_unsafe_attempt"), 10).unwrap();
+    let history_logs =
+        Database::list_automation_history(&conn, Some("rule_unsafe_attempt"), 10).unwrap();
     assert_eq!(history_logs.len(), 1);
     assert_eq!(history_logs[0].status, "failed");
 }
@@ -131,29 +153,64 @@ fn test_developer_workspace_scanner_manifest_detection() {
     let node_dir = base.join("my-web-app");
     fs::create_dir_all(node_dir.join("node_modules").join("lodash")).unwrap();
     fs::write(node_dir.join("package.json"), r#"{"name": "my-web-app"}"#).unwrap();
-    fs::write(node_dir.join("package-lock.json"), r#"{"lockfileVersion": 3}"#).unwrap();
-    fs::write(node_dir.join("node_modules").join("lodash").join("index.js"), "module.exports = {};").unwrap();
+    fs::write(
+        node_dir.join("package-lock.json"),
+        r#"{"lockfileVersion": 3}"#,
+    )
+    .unwrap();
+    fs::write(
+        node_dir
+            .join("node_modules")
+            .join("lodash")
+            .join("index.js"),
+        "module.exports = {};",
+    )
+    .unwrap();
 
     // 2. Create a synthetic Rust project with Cargo.toml, Cargo.lock, and target
     let rust_dir = base.join("my-rust-crate");
     fs::create_dir_all(rust_dir.join("target").join("debug")).unwrap();
-    fs::write(rust_dir.join("Cargo.toml"), "[package]\nname = \"my-rust-crate\"\nversion = \"0.1.0\"\n").unwrap();
+    fs::write(
+        rust_dir.join("Cargo.toml"),
+        "[package]\nname = \"my-rust-crate\"\nversion = \"0.1.0\"\n",
+    )
+    .unwrap();
     fs::write(rust_dir.join("Cargo.lock"), "# Lockfile\n").unwrap();
-    fs::write(rust_dir.join("target").join("debug").join("app.exe"), "binary data").unwrap();
+    fs::write(
+        rust_dir.join("target").join("debug").join("app.exe"),
+        "binary data",
+    )
+    .unwrap();
 
     // 3. Create a synthetic Python project with pyproject.toml and .venv
     let py_dir = base.join("my-python-tool");
     fs::create_dir_all(py_dir.join(".venv").join("Lib")).unwrap();
-    fs::write(py_dir.join("pyproject.toml"), "[tool.poetry]\nname = \"tool\"\n").unwrap();
-    fs::write(py_dir.join(".venv").join("pyvenv.cfg"), "home = C:\\Python\n").unwrap();
+    fs::write(
+        py_dir.join("pyproject.toml"),
+        "[tool.poetry]\nname = \"tool\"\n",
+    )
+    .unwrap();
+    fs::write(
+        py_dir.join(".venv").join("pyvenv.cfg"),
+        "home = C:\\Python\n",
+    )
+    .unwrap();
 
     // Run the developer scanner
     let projects = DeveloperWorkspaceScanner::scan_workspace(base, 5);
-    assert_eq!(projects.len(), 3, "Expected 3 detected projects, got {}", projects.len());
+    assert_eq!(
+        projects.len(),
+        3,
+        "Expected 3 detected projects, got {}",
+        projects.len()
+    );
 
     let node_proj = projects.iter().find(|p| p.ecosystem == "Node.js").unwrap();
     assert_eq!(node_proj.manifest_file, "package.json");
-    assert_eq!(node_proj.lockfile_file, Some("package-lock.json".to_string()));
+    assert_eq!(
+        node_proj.lockfile_file,
+        Some("package-lock.json".to_string())
+    );
     assert!(!node_proj.artifacts.is_empty());
     assert_eq!(node_proj.artifacts[0].name, "node_modules");
 
@@ -194,7 +251,11 @@ fn test_event_coalescing_and_debouncing() {
 
     // Verify all rapid writes coalesced into a single path entry
     let matches: Vec<_> = settled.iter().filter(|e| e.path == test_file).collect();
-    assert_eq!(matches.len(), 1, "Expected exactly 1 coalesced event for test_file");
+    assert_eq!(
+        matches.len(),
+        1,
+        "Expected exactly 1 coalesced event for test_file"
+    );
 
     watcher.stop();
 }
@@ -241,5 +302,8 @@ fn test_repeated_trigger_does_not_cause_duplicate_destructive_actions() {
     assert_eq!(run2.status, "dry_run_completed");
     // Verify file remains completely untouched
     assert!(staging_file.exists());
-    assert_eq!(fs::read_to_string(&staging_file).unwrap(), "temporary cache data");
+    assert_eq!(
+        fs::read_to_string(&staging_file).unwrap(),
+        "temporary cache data"
+    );
 }

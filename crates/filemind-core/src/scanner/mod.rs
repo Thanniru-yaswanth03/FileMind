@@ -9,4 +9,3 @@ pub use error::ScanError;
 pub use filter::{ReparsePointPolicy, ScanFilter};
 pub use progress::ProgressTracker;
 pub use walker::{execute_scan, InternalDirectoryRecord, ScanResult};
-

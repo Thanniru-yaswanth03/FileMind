@@ -263,5 +263,3 @@ CREATE INDEX IF NOT EXISTS idx_auto_rules_enabled ON automation_rules(is_enabled
 CREATE INDEX IF NOT EXISTS idx_auto_history_rule ON automation_execution_history(rule_id);
 CREATE INDEX IF NOT EXISTS idx_auto_history_started ON automation_execution_history(started_at DESC);
 "#;
-
-
